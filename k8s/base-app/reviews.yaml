@@ -26,14 +26,14 @@ spec:
         - name: ENABLE_RATINGS
           value: "true"
         - name: RATINGS_SERVICE
-          value: "http://ratings:9080"
+          value: "http://bookinfo-ratings-dev:9080"
         - name: CLUSTER_NAME
           value: "cluster-1"
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: reviews
+  name: bookinfo-reviews-dev
   labels:
     app: reviews
 spec:

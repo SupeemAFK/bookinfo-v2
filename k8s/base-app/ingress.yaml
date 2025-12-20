@@ -1,19 +1,19 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: bookinfo-ingress
+  name: bookinfo-ingress-dev
   annotations:
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
 spec:
   ingressClassName: nginx
   rules:
-  - host: PLACEHOLDER_HOST
+  - host: bookinfo-supeem-dev.opsta.in.th
     http:
       paths:
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: productpage
+            name: bookinfo-productpage-dev
             port:
               number: 9080

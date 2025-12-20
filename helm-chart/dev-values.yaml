@@ -1,12 +1,8 @@
-environment: "dev"
-
-global:
-  harborJsonConfig: '{"auths": {"registry-supeem.opsta.in.th": {"auth": "eyJhdXRocyI6eyJyZWdpc3RyeS1zdXBlZW0ub3BzdGEuaW4udGgiOnsidXNlcm5hbWUiOiJhZG1pbiIsInBhc3N3b3JkIjoiaVhWSjhtdldYSUFJcUVndm8yVCt0cFp5RG4vQllHWTkiLCJhdXRoIjoiWVdSdGFXNDZhVmhXU2podGRsZFlTVUZKY1VWbmRtOHlWQ3QwY0ZwNVJHNHZRbGxIV1RrPSJ9fX0="}}}'
-
 imagePullSecrets:
   - name: harbor-creds-dev 
 
 ingress:
+  name: bookinfo-ingress-dev
   enabled: true
   className: nginx
   host: bookinfo-supeem-dev.opsta.in.th
@@ -14,14 +10,18 @@ ingress:
     enabled: true
     secretName: bookinfo-tls-secret
     issuer: letsencrypt-prod
+  service:
+    name: bookinfo-productpage-dev
 
 details:
   replicas: 1
+  version: "v1"
   image:
     repository: registry-supeem.opsta.in.th/library/details-service
     tag: "v1"
     pullPolicy: Always
   service:
+    name: bookinfo-details-dev
     port: 9080
   env:
     enableExternalBookService: "false"
@@ -29,16 +29,18 @@ details:
 
 ratings:
   replicas: 1
+  version: "v2"
   image:
     repository: registry-supeem.opsta.in.th/library/ratings-service
     tag: "v2"
     pullPolicy: Always
   service:
+    name: bookinfo-ratings-dev
     port: 9080
   
   env:
     version: "v2"
-    mongoUrl: "mongodb://mongodb:27017" 
+    mongoUrl: "mongodb://mongodb-dev:27017" 
     dbName: "ratings"
   
   mongodbSecret:
@@ -54,30 +56,54 @@ reviews:
     tag: "v1"
     pullPolicy: Always
   service:
+    name: bookinfo-reviews-dev
     port: 9080
   env:
     starColor: "black"
     enableRatings: "true"
-    ratingsService: "http://ratings:9080"
+    ratingsService: "http://bookinfo-ratings-dev:9080"
     clusterName: "cluster-1"
 
 productpage:
   replicas: 1
+  version: "v1"
   image:
     repository: registry-supeem.opsta.in.th/library/productpage-service
     tag: "v1"
     pullPolicy: Always
   service:
+    name: bookinfo-productpage-dev
     port: 9080
   env:
-    detailsHostname: "http://details:9080"
-    ratingsHostname: "http://ratings:9080"
-    reviewsHostname: "http://reviews:9080"
+    detailsHostname: "http://bookinfo-details-dev:9080"
+    ratingsHostname: "http://bookinfo-ratings-dev:9080"
+    reviewsHostname: "http://bookinfo-reviews-dev:9080"
     floodFactor: "0"
 
 mongodb:
+  fullnameOverride: "mongodb-dev" #Service name
+  architecture: standalone
   auth:
-    rootPassword: "XH8LXXCA7ocbZdtSGiPd1i30l7AlnJce"
-    username: "user1"
-    password: "XH8LXXCA7ocbZdtSGiPd1i30l7AlnJce"
-    database: "ratings"
+    username: user1
+    database: ratings
+    existingSecret: mongodb-creds-dev
+    passwordKey: mongodb-passwords
+    rootPasswordKey: mongodb-root-password
+    userNameKey: db-username
+  initdbScriptsConfigMap: mongodb-init-script-dev
+  persistence:
+    enabled: true
+    size: 8Gi
+  extraEnvVars:
+  - name: MONGODB_USERNAME
+    valueFrom:
+      secretKeyRef:
+        name: mongodb-creds-dev
+        key: db-username
+  - name: MONGODB_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: mongodb-creds-dev
+        key: mongodb-passwords
+  - name: MONGODB_DATABASE
+    value: "ratings"

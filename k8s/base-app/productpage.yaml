@@ -22,18 +22,18 @@ spec:
         - containerPort: 9080
         env:
         - name: DETAILS_HOSTNAME
-          value: "http://details:9080"
+          value: "http://bookinfo-details-dev:9080"
         - name: RATINGS_HOSTNAME
-          value: "http://ratings:9080"
+          value: "http://bookinfo-ratings-dev:9080"
         - name: REVIEWS_HOSTNAME
-          value: "http://reviews:9080"
+          value: "http://bookinfo-reviews-dev:9080"
         - name: FLOOD_FACTOR
           value: "0"
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: productpage
+  name: bookinfo-productpage-dev
   labels:
     app: productpage
 spec:

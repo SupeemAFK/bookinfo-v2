@@ -1,10 +1,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: productpage-v1
+  name: productpage-{{ .Values.productpage.version }}
   labels:
     app: productpage
-    version: v1
+    version: {{ .Values.productpage.version }}
 spec:
   replicas: {{ .Values.productpage.replicas }}
   selector:
@@ -42,7 +42,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: productpage
+  name: "{{ .Values.productpage.service.name }}"
   labels:
     app: productpage
 spec:

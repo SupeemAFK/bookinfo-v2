@@ -1,10 +1,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: details-v1
+  name: details-{{ .Values.details.version }}
   labels:
     app: details
-    version: v1
+    version: {{ .Values.details.version }}
 spec:
   replicas: {{ .Values.details.replicas }}
   selector:
@@ -38,7 +38,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: details
+  name: "{{ .Values.details.service.name }}"
   labels:
     app: details
 spec:
