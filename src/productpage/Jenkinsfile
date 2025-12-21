@@ -60,6 +60,9 @@ spec:
         }
 
         stage('Build & Push to Harbor') {
+            when {
+                changeset "productpage/**"
+            }
             steps {
                 container('docker') {
                     withCredentials([usernamePassword(credentialsId: 'registry-bookinfo', usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
