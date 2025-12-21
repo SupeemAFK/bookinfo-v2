@@ -69,7 +69,7 @@ def get_book_details(id, headers)
         'author': 'William Shakespeare',
         'year': 1595,
         'type' => 'paperback',
-        'pages' => 200,
+        'pages' => 5000,
         'publisher' => 'PublisherA',
         'language' => 'English',
         'ISBN-10' => '1234567890',
