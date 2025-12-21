@@ -87,15 +87,16 @@ spec:
         stage('Create Git Tag') {
             steps {
                 script {
-                    withEnv(['GIT_SSH_COMMAND=ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no']) {
-                        sh 'git config user.email "jenkins@opsta.in.th"'
-                        sh 'git config user.name "Jenkins Bot"'
+                    sh 'git config user.email "jenkins@opsta.in.th"'
+                    sh 'git config user.name "Jenkins Bot"'
 
-                        sh "git tag -a ${params.RELEASE_VERSION} -m 'Release ${params.RELEASE_VERSION}'"
-                        
-                        sshagent([env.GIT_CREDS]) {
-                            sh "git push origin ${params.RELEASE_VERSION}"
-                        }
+                    sh "git tag -a ${params.RELEASE_VERSION} -m 'Release ${params.RELEASE_VERSION}'"
+                    
+                    withCredentials([sshUserPrivateKey(credentialsId: env.GIT_CREDS, keyFileVariable: 'SSH_KEY_FILE')]) {
+                        sh """
+                            export GIT_SSH_COMMAND="ssh -i \${SSH_KEY_FILE} -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+                            git push origin ${params.RELEASE_VERSION}
+                        """
                     }
                 }
             }
