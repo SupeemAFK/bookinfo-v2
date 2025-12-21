@@ -112,7 +112,7 @@ public class LibertyRestEndpoint extends Application {
     	// reviewer 1:
     	result += "{";
     	result += "  \"reviewer\": \"Reviewer1\",";
-    	result += "  \"text\": \"An extremely entertaining play by Shakespeare. The slapstick humour is refreshing!\"";
+    	result += "  \"text\": \"An extremely entertaining play by TEST. The slapstick humour is refreshing!\"";
       if (ratings_enabled) {
         if (starsReviewer1 != -1) {
           result += ", \"rating\": {\"stars\": " + starsReviewer1 + ", \"color\": \"" + star_color + "\"}";
