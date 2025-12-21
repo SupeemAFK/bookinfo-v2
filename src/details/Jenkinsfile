@@ -61,7 +61,7 @@ spec:
 
         stage('Build & Push to Harbor') {
             when {
-                changeset "details/**"
+                changeset "src/details/**"
             }
             steps {
                 container('docker') {
@@ -91,6 +91,9 @@ spec:
         }
 
         stage('Deploy to K8s with Helm') {
+            when {
+                changeset "src/details/**"
+            }
             steps {
                 container('helm') {
                     echo "Upgrading release ${env.RELEASE_NAME} in namespace ${env.NAMESPACE}"
