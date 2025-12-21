@@ -1,0 +1,24 @@
+
+imagePullSecrets:
+  - name: harbor-creds-prod
+
+ratings:
+  replicas: 1
+  version: "v2"
+  image:
+    repository: registry-supeem.opsta.in.th/library/ratings-service
+    tag: "v2"
+    pullPolicy: Always
+  service:
+    name: bookinfo-ratings
+    port: 9080
+  
+  env:
+    version: "v2"
+    mongoUrl: "mongodb://mongodb:27017" 
+    dbName: "ratings"
+  
+  mongodbSecret:
+    name: mongodb-creds-prod
+    usernameKey: db-username
+    passwordKey: mongodb-passwords

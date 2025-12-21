@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: "{{ .Values.ratings.service.name }}"
+  labels:
+    app: ratings
+spec:
+  type: ClusterIP
+  ports:
+  - port: {{ .Values.ratings.service.port }}
+    name: http
+  selector:
+    app: ratings

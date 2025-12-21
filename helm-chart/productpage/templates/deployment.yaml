@@ -38,17 +38,3 @@ spec:
           value: "{{ .Values.productpage.env.reviewsHostname }}"
         - name: FLOOD_FACTOR
           value: "{{ .Values.productpage.env.floodFactor }}"
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: "{{ .Values.productpage.service.name }}"
-  labels:
-    app: productpage
-spec:
-  type: ClusterIP
-  ports:
-  - port: {{ .Values.productpage.service.port }}
-    name: http
-  selector:
-    app: productpage

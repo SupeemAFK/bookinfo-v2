@@ -34,17 +34,3 @@ spec:
           value: "{{ .Values.details.env.enableExternalBookService }}"
         - name: DO_NOT_ENCRYPT
           value: "{{ .Values.details.env.doNotEncrypt }}"
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: "{{ .Values.details.service.name }}"
-  labels:
-    app: details
-spec:
-  type: ClusterIP
-  ports:
-  - port: {{ .Values.details.service.port }}
-    name: http
-  selector:
-    app: details

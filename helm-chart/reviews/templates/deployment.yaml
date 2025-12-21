@@ -38,17 +38,3 @@ spec:
           value: "{{ .Values.reviews.env.ratingsService }}"
         - name: CLUSTER_NAME
           value: "{{ .Values.reviews.env.clusterName }}"
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: "{{ .Values.reviews.service.name }}"
-  labels:
-    app: reviews
-spec:
-  type: ClusterIP
-  ports:
-  - port: {{ .Values.reviews.service.port }}
-    name: http
-  selector:
-    app: reviews

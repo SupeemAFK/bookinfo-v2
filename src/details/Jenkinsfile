@@ -34,9 +34,9 @@ spec:
         FULL_IMAGE   = "${REGISTRY_URL}/${IMAGE_PATH}"
 
         CHART_DIR    = "helm-chart"
-        VALUES_FILE  = "helm-chart/dev-values.yaml"
+        VALUES_FILE  = "helm-chart/details/dev-details-values.yaml"
 
-        RELEASE_NAME = "bookinfo-dev"
+        RELEASE_NAME = "bookinfo-details-dev"
         NAMESPACE    = "bookinfo-dev"
     }
 
@@ -85,10 +85,7 @@ spec:
                         helm upgrade --install ${env.RELEASE_NAME} ${env.CHART_DIR} \
                             --namespace ${env.NAMESPACE} \
                             -f ${env.VALUES_FILE} \
-                            --set productpage.image.tag=${env.GIT_TAG} \
                             --set details.image.tag${env.GIT_TAG} \
-                            --set ratings.image.tag${env.GIT_TAG} \
-                            --set reviews.image.tag${env.GIT_TAG} \
                             --wait
                     """
                 }

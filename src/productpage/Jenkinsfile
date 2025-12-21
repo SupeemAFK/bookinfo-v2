@@ -34,9 +34,9 @@ spec:
         FULL_IMAGE   = "${REGISTRY_URL}/${IMAGE_PATH}"
 
         CHART_DIR    = "helm-chart"
-        VALUES_FILE  = "helm-chart/dev-values.yaml"
+        VALUES_FILE  = "helm-chart/productpage/dev-productpage-values.yaml"
 
-        RELEASE_NAME = "bookinfo-dev"
+        RELEASE_NAME = "bookinfo-productpage-dev"
         NAMESPACE    = "bookinfo-dev"
     }
 
@@ -79,16 +79,11 @@ spec:
             steps {
                 container('helm') {
                     echo "Upgrading release ${env.RELEASE_NAME} in namespace ${env.NAMESPACE}"
-                    sh """
-                        helm dependency update ${env.CHART_DIR}
-                        
+                    sh """                        
                         helm upgrade --install ${env.RELEASE_NAME} ${env.CHART_DIR} \
                             --namespace ${env.NAMESPACE} \
                             -f ${env.VALUES_FILE} \
                             --set productpage.image.tag=${env.GIT_TAG} \
-                            --set details.image.tag${env.GIT_TAG} \
-                            --set ratings.image.tag${env.GIT_TAG} \
-                            --set reviews.image.tag${env.GIT_TAG} \
                             --wait
                     """
                 }

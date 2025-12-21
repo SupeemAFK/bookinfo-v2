@@ -1,0 +1,19 @@
+
+imagePullSecrets:
+  - name: harbor-creds-dev 
+
+reviews:
+  replicas: 1
+  version: "v1"
+  image:
+    repository: registry-supeem.opsta.in.th/library/reviews-service
+    tag: "v1"
+    pullPolicy: Always
+  service:
+    name: bookinfo-reviews-dev
+    port: 9080
+  env:
+    starColor: "black"
+    enableRatings: "true"
+    ratingsService: "http://bookinfo-ratings-dev:9080"
+    clusterName: "cluster-1"
