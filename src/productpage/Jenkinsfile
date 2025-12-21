@@ -33,7 +33,7 @@ spec:
         IMAGE_PATH   = "library/productpage-service"
         FULL_IMAGE   = "${REGISTRY_URL}/${IMAGE_PATH}"
 
-        CHART_DIR    = "helm-chart"
+        CHART_DIR    = "helm-chart/productpage"
         VALUES_FILE  = "helm-chart/productpage/dev-productpage-values.yaml"
 
         RELEASE_NAME = "bookinfo-productpage-dev"

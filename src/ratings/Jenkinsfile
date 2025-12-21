@@ -33,7 +33,7 @@ spec:
         IMAGE_PATH   = "library/ratings-service"
         FULL_IMAGE   = "${REGISTRY_URL}/${IMAGE_PATH}"
 
-        CHART_DIR    = "helm-chart"
+        CHART_DIR    = "helm-chart/ratings"
         VALUES_FILE  = "helm-chart/ratings/dev-ratings-values.yaml"
 
         RELEASE_NAME = "bookinfo-ratings-dev"
