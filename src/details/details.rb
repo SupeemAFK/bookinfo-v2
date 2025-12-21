@@ -66,10 +66,10 @@ def get_book_details(id, headers)
 
     return {
         'id' => id,
-        'author': 'Natasha romannoff',
+        'author': 'William Shakespeare',
         'year': 1595,
         'type' => 'paperback',
-        'pages' => 5000,
+        'pages' => 200,
         'publisher' => 'PublisherA',
         'language' => 'English',
         'ISBN-10' => '1234567890',

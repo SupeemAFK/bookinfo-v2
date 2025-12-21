@@ -85,7 +85,10 @@ spec:
                         helm upgrade --install ${env.RELEASE_NAME} ${env.CHART_DIR} \
                             --namespace ${env.NAMESPACE} \
                             -f ${env.VALUES_FILE} \
-                            --set details.image.tag=${env.GIT_TAG} \
+                            --set productpage.image.tag=${env.GIT_TAG} \
+                            --set details.image.tag${env.GIT_TAG} \
+                            --set ratings.image.tag${env.GIT_TAG} \
+                            --set reviews.image.tag${env.GIT_TAG} \
                             --wait
                     """
                 }
