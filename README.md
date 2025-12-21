@@ -24,22 +24,22 @@ kubectl create secret generic mongodb-creds-dev \
 ### 3. Helm install
 ```
 # Setup ingress
-helm install bookinfo-ingress-dev helm-chart/ingress --namespace bookinfo-dev -f helm-chart/ingress/ingress-dev-values.yaml
+helm install bookinfo-ingress-dev helm-chart/ingress --namespace bookinfo-dev -f helm-chart/ingress/dev-ingress-values.yaml
 
 # Setup mongodb
 helm repo add bitnami https://charts.bitnami.com/bitnami
 helm repo update
-helm install mongodb-dev bitnami/mongodb --namespace bookinfo-dev -f k8s/mongodb-values/mongodb-dev-values.yaml
+helm install mongodb-dev bitnami/mongodb --namespace bookinfo-dev -f k8s/mongodb-values/dev-mongodb-values.yaml
 
 # Setup productpage service
-helm install bookinfo-productpage-dev helm-chart/productpage --namespace bookinfo-dev -f helm-chart/productpage/productpage-dev-values.yaml
+helm install bookinfo-productpage-dev helm-chart/productpage --namespace bookinfo-dev -f helm-chart/productpage/dev-productpage-values.yaml
 
 # Setup details service
-helm install bookinfo-details-dev helm-chart/details --namespace bookinfo-dev -f helm-chart/details/details-dev-values.yaml
+helm install bookinfo-details-dev helm-chart/details --namespace bookinfo-dev -f helm-chart/details/dev-details-values.yaml
 
 # Setup ratings service
-helm install bookinfo-ratings-dev helm-chart/ratings --namespace bookinfo-dev -f helm-chart/ratings/ratings-dev-values.yaml
+helm install bookinfo-ratings-dev helm-chart/ratings --namespace bookinfo-dev -f helm-chart/ratings/dev-ratings-values.yaml
 
 # Setup reviews service
-helm install bookinfo-reviews-dev helm-chart/reviews --namespace bookinfo-dev -f helm-chart/reviews/reviews-dev-values.yaml
+helm install bookinfo-reviews-dev helm-chart/reviews --namespace bookinfo-dev -f helm-chart/reviews/dev-ratings-values.yaml
 ```
