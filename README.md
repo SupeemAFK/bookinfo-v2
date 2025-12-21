@@ -21,7 +21,15 @@ kubectl create secret generic mongodb-creds-dev \
   --from-literal=db-username="YOUR_USERNAME"
 ```
 
-### 3. Helm install
+### 3. Create mongodb configmap
+```
+kubectl create configmap mongodb-init-script-dev \
+  --from-file=src/ratings/databases/ratings_data.json \
+  --from-file=src/ratings/databases/script.sh \
+  -n bookinfo-dev
+```
+
+### 4. Helm install
 ```
 # Setup ingress
 helm install bookinfo-ingress-dev helm-chart/ingress --namespace bookinfo-dev -f helm-chart/ingress/dev-ingress-values.yaml
