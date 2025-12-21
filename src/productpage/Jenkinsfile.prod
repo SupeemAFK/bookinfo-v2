@@ -1,0 +1,74 @@
+pipeline {
+    agent {
+        kubernetes {
+            yaml """
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: jenkins-agent-prod-deploy
+spec:
+  containers:
+  - name: helm
+    image: alpine/helm:3.12.0
+    command: ['cat']
+    tty: true
+"""
+        }
+    }
+
+    parameters {
+        string(name: 'DEPLOY_VERSION', description: 'Which version to deploy? (e.g. v1.0.0)', trim: true)
+    }
+
+    environment {
+        RELEASE_NAME = "bookinfo-productpage"
+        NAMESPACE    = "bookinfo-prod"
+        CHART_DIR    = "helm-chart/productpage"
+        VALUES_FILE  = "helm-chart/productpage/prod-productpage-values.yaml"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                script {
+                    withEnv(['GIT_SSH_COMMAND=ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no']) {
+                        checkout([$class: 'GitSCM',
+                            branches: [[name: "*/main"]], 
+                            userRemoteConfigs: [[
+                                credentialsId: 'bookinfo-deploy-key',
+                                url: 'git@gitlab.com:SupeemAFK/bookinfo.git'
+                            ]]
+                        ])
+                    }
+                }
+            }
+        }
+
+        stage('Deploy to Production') {
+            steps {
+                container('helm') {
+                    script {
+                        echo " DEPLOYING TO PRODUCTION"
+                        echo " Release: ${env.RELEASE_NAME}"
+                        echo " Version: ${params.DEPLOY_VERSION}"
+
+                        sh """
+                            helm upgrade --install ${env.RELEASE_NAME} ${env.CHART_DIR} \
+                                --namespace ${env.NAMESPACE} \
+                                -f ${env.VALUES_FILE} \
+                                --set productpage.image.tag=${params.DEPLOY_VERSION} \
+                                --wait
+                        """
+                    }
+                }
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo "Production Deployment Complete: v${params.DEPLOY_VERSION}"
+        }
+    }
+}
