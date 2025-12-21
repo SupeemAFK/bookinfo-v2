@@ -60,9 +60,6 @@ spec:
         }
 
         stage('Build & Push to Harbor') {
-            when {
-                changeset "src/reviews/**"
-            }
             steps {
                 container('docker') {
                     withCredentials([usernamePassword(credentialsId: 'registry-bookinfo', usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
@@ -91,9 +88,6 @@ spec:
         }
 
         stage('Deploy to K8s with Helm') {
-            when {
-                changeset "src/reviews/**"
-            }
             steps {
                 container('helm') {
                     echo "Upgrading release ${env.RELEASE_NAME} in namespace ${env.NAMESPACE}"
