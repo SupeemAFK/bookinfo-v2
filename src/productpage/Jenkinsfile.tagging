@@ -1,0 +1,104 @@
+pipeline {
+    agent {
+        kubernetes {
+            yaml """
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: jenkins-agent-tagging
+spec:
+  containers:
+  - name: docker
+    image: docker:24.0.5
+    command: ['cat']
+    tty: true
+    volumeMounts:
+    - name: docker-sock
+      mountPath: /var/run/docker.sock
+  volumes:
+  - name: docker-sock
+    hostPath:
+      path: /var/run/docker.sock
+"""
+        }
+    }
+
+    parameters {
+        string(name: 'RELEASE_VERSION', description: 'The new version to release (e.g. v1.0.0)', trim: true)
+    }
+
+    environment {
+        REGISTRY_URL = "registry-supeem.opsta.in.th"
+        IMAGE_PATH   = "library/productpage-service"
+        FULL_IMAGE   = "${REGISTRY_URL}/${IMAGE_PATH}"
+        
+        GIT_REPO     = "git@gitlab.com:SupeemAFK/bookinfo.git"
+        GIT_CREDS    = "bookinfo-deploy-key"
+    }
+
+    stages {
+        stage('Checkout Main') {
+            steps {
+                script {
+                    withEnv(['GIT_SSH_COMMAND=ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no']) {
+                        checkout([$class: 'GitSCM',
+                            branches: [[name: "*/main"]], 
+                            userRemoteConfigs: [[
+                                credentialsId: env.GIT_CREDS,
+                                url: env.GIT_REPO
+                            ]]
+                        ])
+                    }
+                    
+                    env.SHORT_HASH = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+                    echo "Promoting Artifact from Commit: ${env.SHORT_HASH}"
+                }
+            }
+        }
+
+        stage('Promote Docker Image') {
+            steps {
+                container('docker') {
+                    withCredentials([usernamePassword(credentialsId: 'registry-bookinfo', usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
+                        sh "mkdir -p ${WORKSPACE}/.docker"
+                        withEnv(["DOCKER_CONFIG=${WORKSPACE}/.docker"]) {
+                            script {
+                                retry(3) {
+                                    sh 'printenv REG_PASS | docker login $REGISTRY_URL -u $REG_USER --password-stdin'
+                                }
+
+                                echo "Pulling source image: ${env.FULL_IMAGE}:${env.SHORT_HASH}"
+                                sh "docker pull ${env.FULL_IMAGE}:${env.SHORT_HASH}"
+
+                                echo "Retagging to: ${env.FULL_IMAGE}:${params.RELEASE_VERSION}"
+                                sh "docker tag ${env.FULL_IMAGE}:${env.SHORT_HASH} ${env.FULL_IMAGE}:${params.RELEASE_VERSION}"
+
+                                retry(3) {
+                                    sh "docker push ${env.FULL_IMAGE}:${params.RELEASE_VERSION}"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Create Git Tag') {
+            steps {
+                script {
+                    withEnv(['GIT_SSH_COMMAND=ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no']) {
+                        sh 'git config user.email "jenkins@opsta.in.th"'
+                        sh 'git config user.name "Jenkins Bot"'
+
+                        sh "git tag -a ${params.RELEASE_VERSION} -m 'Release ${params.RELEASE_VERSION}'"
+                        
+                        sshagent([env.GIT_CREDS]) {
+                            sh "git push origin ${params.RELEASE_VERSION}"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
