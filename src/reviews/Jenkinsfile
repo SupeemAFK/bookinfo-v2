@@ -1,0 +1,120 @@
+pipeline {
+    agent {
+        kubernetes {
+            yaml """
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: jenkins-agent-ratings
+spec:
+  containers:
+  - name: docker
+    image: docker:24.0.5
+    command: ['cat']
+    tty: true
+    volumeMounts:
+    - name: docker-sock
+      mountPath: /var/run/docker.sock
+  - name: helm
+    image: alpine/helm:3.12.0
+    command: ['cat']
+    tty: true
+  volumes:
+  - name: docker-sock
+    hostPath:
+      path: /var/run/docker.sock
+"""
+        }
+    }
+
+    environment {
+        REGISTRY_URL = "registry-supeem.opsta.in.th"
+        IMAGE_PATH   = "library/reviews-service"
+        FULL_IMAGE   = "${REGISTRY_URL}/${IMAGE_PATH}"
+
+        CHART_DIR    = "helm-chart/reviews"
+        VALUES_FILE  = "helm-chart/reviews/dev-reviews-values.yaml"
+
+        RELEASE_NAME = "bookinfo-reviews-dev"
+        NAMESPACE    = "bookinfo-dev"
+    }
+
+    stages {
+        stage('Checkout & Setup') {
+            steps {
+                script {
+                    withEnv(['GIT_SSH_COMMAND=ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no']) {
+                        checkout([$class: 'GitSCM',
+                            branches: [[name: '*/dev']],
+                            userRemoteConfigs: [[
+                                credentialsId: 'bookinfo-deploy-key',
+                                url: 'git@gitlab.com:SupeemAFK/bookinfo.git'
+                            ]]
+                        ])
+                    }
+                    env.GIT_TAG = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+                    echo "Current Version: ${env.GIT_TAG}"
+                }
+            }
+        }
+
+        stage('Build & Push to Harbor') {
+            when {
+                changeset "src/reviews/**"
+            }
+            steps {
+                container('docker') {
+                    withCredentials([usernamePassword(credentialsId: 'registry-bookinfo', usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
+                        sh "mkdir -p ${WORKSPACE}/.docker"
+
+                        withEnv(["DOCKER_CONFIG=${WORKSPACE}/.docker"]) {
+                            script {
+                                retry(3) {
+                                    echo "Attempting Docker Login..."
+                                    sh 'printenv REG_PASS | docker login $REGISTRY_URL -u $REG_USER --password-stdin'
+                                }
+                            }
+
+                            dir('src/reviews') {
+                                echo "Building and Pushing image: ${env.FULL_IMAGE}:${env.GIT_TAG}"
+                                sh "docker build -t ${env.FULL_IMAGE}:${env.GIT_TAG} ."
+                                
+                                retry(3) {
+                                    sh "docker push ${env.FULL_IMAGE}:${env.GIT_TAG}"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Deploy to K8s with Helm') {
+            when {
+                changeset "src/reviews/**"
+            }
+            steps {
+                container('helm') {
+                    echo "Upgrading release ${env.RELEASE_NAME} in namespace ${env.NAMESPACE}"
+                    sh """                        
+                        helm upgrade --install ${env.RELEASE_NAME} ${env.CHART_DIR} \
+                            --namespace ${env.NAMESPACE} \
+                            -f ${env.VALUES_FILE} \
+                            --set reviews.image.tag=${env.GIT_TAG} \
+                            --wait
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Deployment Successful: version ${env.GIT_TAG}"
+        }
+        failure {
+            echo "Deployment Failed: Please check the Jenkins Console Output."
+        }
+    }
+}

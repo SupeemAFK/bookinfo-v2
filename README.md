@@ -1,33 +1,53 @@
 # Bookinfo Application for Workshop
 
-This is a way to run app with docker compose it use nginx as ingress to control traffic for each services.
+## Example Installation for "dev" environment
+- For others environment do the same just change environment. 
+- Also please install **nginx-ingress** and **cert-manager** first.
 
-nginx will run on **port:9080**
-
-
-### Start application and all services
+### 1. Create harbor secret
 ```
-docker compose up -d
-```
-
-### Stop application and all services
-```
-docker compose down
+kubectl create secret docker-registry harbor-creds-dev \
+  --namespace=bookinfo-dev
+  --docker-username="YOUR_USERNAME" \
+  --docker-password="YOUR_PASSWORD"
 ```
 
-After run compose you can access app or services below.
-- The followings are **hostname** inside Nginx Ingress route
-    - productpage-service: http://productpage:9080
-    - details-service: http://details:9080
-    - reviews-service: http://reviews:9080
-    - ratings-service: http://ratings:9080
-    - db: mongodb://db:27017
+### 2. Create mongodb secret
+```
+kubectl create secret generic mongodb-creds-dev \
+  --namespace bookinfo-dev \
+  --from-literal=mongodb-root-password="YOUR_ROOT_PASSWORD" \
+  --from-literal=mongodb-passwords="YOUR_PASSWORD" \
+  --from-literal=db-username="YOUR_USERNAME"
+```
 
-<br />
+### 3. Create mongodb configmap
+```
+kubectl create configmap mongodb-init-script-dev \
+  --from-file=src/ratings/databases/ratings_data.json \
+  --from-file=src/ratings/databases/script.sh \
+  -n bookinfo-dev
+```
 
-- The followings are **hostname** outside use for Postman
-    - productpage-service: http://localhost:9080
-    - details-service: http://localhost:9080/details
-    - reviews-service: http://localhost:9080/reviews
-    - ratings-service: http://localhost:9080/ratings
-    - db: mongodb://db:27017
+### 4. Helm install
+```
+# Setup ingress
+helm install bookinfo-ingress-dev helm-chart/ingress --namespace bookinfo-dev -f helm-chart/ingress/dev-ingress-values.yaml
+
+# Setup mongodb
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo update
+helm install mongodb-dev bitnami/mongodb --namespace bookinfo-dev -f k8s/mongodb-values/dev-mongodb-values.yaml
+
+# Setup productpage service
+helm install bookinfo-productpage-dev helm-chart/productpage --namespace bookinfo-dev -f helm-chart/productpage/dev-productpage-values.yaml
+
+# Setup details service
+helm install bookinfo-details-dev helm-chart/details --namespace bookinfo-dev -f helm-chart/details/dev-details-values.yaml
+
+# Setup ratings service
+helm install bookinfo-ratings-dev helm-chart/ratings --namespace bookinfo-dev -f helm-chart/ratings/dev-ratings-values.yaml
+
+# Setup reviews service
+helm install bookinfo-reviews-dev helm-chart/reviews --namespace bookinfo-dev -f helm-chart/reviews/dev-ratings-values.yaml
+```

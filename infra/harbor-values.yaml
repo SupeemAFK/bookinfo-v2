@@ -1,0 +1,44 @@
+externalURL: https://registry-supeem.opsta.in.th
+
+expose:
+  type: ingress
+  tls:
+    enabled: true
+    certSource: secret
+    secret:
+      secretName: harbor-cert
+  ingress:
+    hosts:
+      core: registry-supeem.opsta.in.th
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/proxy-body-size: "0"
+
+notary:
+  enabled: false
+
+trivy:
+  enabled: true
+
+persistence:
+  enabled: true
+  resourcePolicy: "keep"
+  persistentVolumeClaim:
+    registry:
+      size: 10Gi
+    jobservice:
+      size: 1Gi
+    database:
+      size: 1Gi
+    redis:
+      size: 1Gi
+    trivy:
+      size: 5Gi
+
+database:
+  type: internal
+
+redis:
+  type: internal

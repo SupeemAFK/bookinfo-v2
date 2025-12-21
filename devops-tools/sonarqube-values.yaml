@@ -1,0 +1,28 @@
+community:
+  enabled: true
+
+monitoringPasscode: "za7WLS1uHnnT3GKZ/lYc"
+
+ingress:
+  enabled: true
+  hosts:
+    - name: sast-supeem.opsta.in.th
+      path: /
+  ingressClassName: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  tls:
+    - secretName: sonar-cert
+      hosts:
+        - sast-supeem.opsta.in.th
+
+persistence:
+  enabled: true
+  size: 10Gi
+
+postgresql:
+  enabled: true
+  persistence:
+    enabled: true
+    size: 10Gi

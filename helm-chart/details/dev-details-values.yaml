@@ -1,0 +1,17 @@
+imagePullSecrets:
+  - name: harbor-creds-dev 
+
+details:
+  replicas: 1
+  version: "v1"
+  image:
+    repository: registry-supeem.opsta.in.th/library/details-service
+    tag: "v1"
+    pullPolicy: Always
+  service:
+    name: bookinfo-details-dev
+    port: 9080
+  env:
+    enableExternalBookService: "false"
+    doNotEncrypt: "false"
+

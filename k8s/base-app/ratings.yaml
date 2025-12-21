@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ratings-v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ratings
+  template:
+    metadata:
+      labels:
+        app: ratings
+    spec:
+      imagePullSecrets:
+      - name: harbor-cred
+      containers:
+      - name: ratings
+        image: registry-supeem.opsta.in.th/library/ratings-service:v2
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 9080
+        env:
+        - name: SERVICE_VERSION
+          value: "v2"
+        - name: MONGO_DB_URL
+          value: "mongodb://mongodb-dev:27017"
+        - name: MONGO_DB_NAME
+          value: "ratings"
+        - name: MONGO_DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-creds
+              key: db-username
+        - name: MONGO_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-creds
+              key: mongodb-passwords
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookinfo-ratings-dev
+  labels:
+    app: ratings
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9080
+    name: http
+  selector:
+    app: ratings

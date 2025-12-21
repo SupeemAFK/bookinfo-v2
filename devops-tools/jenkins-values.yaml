@@ -1,0 +1,18 @@
+controller:
+  componentName: "jenkins-controller"
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hostName: cicd-supeem.opsta.in.th
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    tls:
+      - secretName: jenkins-cert
+        hosts:
+          - cicd-supeem.opsta.in.th
+
+persistence:
+  enabled: true
+  size: "10Gi"

@@ -1,0 +1,32 @@
+architecture: standalone
+
+auth:
+  username: user1
+  database: ratings
+
+  existingSecret: mongodb-creds-uat
+
+  passwordKey: mongodb-passwords      
+  rootPasswordKey: mongodb-root-password
+  
+  userNameKey: db-username
+
+initdbScriptsConfigMap: mongodb-init-script-uat
+
+persistence:
+  enabled: true
+  size: 8Gi
+
+extraEnvVars:
+  - name: MONGODB_USERNAME
+    valueFrom:
+      secretKeyRef:
+        name: mongodb-creds-uat
+        key: db-username
+  - name: MONGODB_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: mongodb-creds-uat
+        key: mongodb-passwords
+  - name: MONGODB_DATABASE
+    value: "ratings"

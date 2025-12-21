@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reviews-{{ .Values.reviews.version }}
+  labels:
+    app: reviews
+    version: {{ .Values.reviews.version }}
+spec:
+  replicas: {{ .Values.reviews.replicas }}
+  selector:
+    matchLabels:
+      app: reviews
+      version: {{ .Values.reviews.version }}
+  template:
+    metadata:
+      labels:
+        app: reviews
+        version: {{ .Values.reviews.version }}
+    spec:
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.imagePullSecrets }}
+        - name: {{ .name }}
+        {{- end }}
+      {{- end }}
+      containers:
+      - name: reviews
+        image: "{{ .Values.reviews.image.repository }}:{{ .Values.reviews.image.tag }}"
+        imagePullPolicy: {{ .Values.reviews.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.reviews.service.port }}
+        env:
+        - name: STAR_COLOR
+          value: "{{ .Values.reviews.env.starColor }}"
+        - name: ENABLE_RATINGS
+          value: "{{ .Values.reviews.env.enableRatings }}"
+        - name: RATINGS_SERVICE
+          value: "{{ .Values.reviews.env.ratingsService }}"
+        - name: CLUSTER_NAME
+          value: "{{ .Values.reviews.env.clusterName }}"

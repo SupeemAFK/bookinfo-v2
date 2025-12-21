@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: details-{{ .Values.details.version }}
+  labels:
+    app: details
+    version: {{ .Values.details.version }}
+spec:
+  replicas: {{ .Values.details.replicas }}
+  selector:
+    matchLabels:
+      app: details
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: details
+        version: v1
+    spec:
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.imagePullSecrets }}
+        - name: {{ .name }}
+        {{- end }}
+      {{- end }}
+      containers:
+      - name: details
+        image: "{{ .Values.details.image.repository }}:{{ .Values.details.image.tag }}"
+        imagePullPolicy: {{ .Values.details.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.details.service.port }}
+        env:
+        - name: ENABLE_EXTERNAL_BOOK_SERVICE
+          value: "{{ .Values.details.env.enableExternalBookService }}"
+        - name: DO_NOT_ENCRYPT
+          value: "{{ .Values.details.env.doNotEncrypt }}"

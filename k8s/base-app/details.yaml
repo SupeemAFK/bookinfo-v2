@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: details-v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: details
+  template:
+    metadata:
+      labels:
+        app: details
+    spec:
+      imagePullSecrets:
+      - name: harbor-cred
+      containers:
+      - name: details
+        image: registry-supeem.opsta.in.th/library/details-service:v1
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 9080
+        env:
+        - name: ENABLE_EXTERNAL_BOOK_SERVICE
+          value: "false"
+        - name: DO_NOT_ENCRYPT
+          value: "false"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookinfo-details-dev
+  labels:
+    app: details
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9080
+    name: http
+  selector:
+    app: details

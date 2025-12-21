@@ -1,5 +1,7 @@
+# Doesn't use in k8s only for local testing with nginx act as reverse proxy and load balancer
+
 services:
-  ingress:
+  ingress: 
     image: nginx:alpine
     ports:
       - "9080:9080"
@@ -13,7 +15,7 @@ services:
 
   productpage:
     build:
-      context: ./src/productpage 
+      context: ../src/productpage 
       dockerfile: Dockerfile
     image: productpage-service:v1
     environment:
@@ -25,7 +27,7 @@ services:
 
   details:
     build:
-      context: ./src/details
+      context: ../src/details
       dockerfile: Dockerfile
     image: details-service:v1
     hostname: details
@@ -35,7 +37,7 @@ services:
 
   ratings:
     build:
-      context: ./src/ratings
+      context: ../src/ratings
       dockerfile: Dockerfile
     image: ratings-service:v2
     hostname: ratings
@@ -64,7 +66,7 @@ services:
 
   reviews:
     build:
-      context: ./src/reviews
+      context: ../src/reviews
       dockerfile: Dockerfile
     image: reviews-service:v1
     hostname: reviews

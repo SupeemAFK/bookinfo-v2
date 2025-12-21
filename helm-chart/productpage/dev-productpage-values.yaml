@@ -1,0 +1,19 @@
+
+imagePullSecrets:
+  - name: harbor-creds-dev 
+
+productpage:
+  replicas: 1
+  version: "v1"
+  image:
+    repository: registry-supeem.opsta.in.th/library/productpage-service
+    tag: "v1"
+    pullPolicy: Always
+  service:
+    name: bookinfo-productpage-dev
+    port: 9080
+  env:
+    detailsHostname: "http://bookinfo-details-dev:9080"
+    ratingsHostname: "http://bookinfo-ratings-dev:9080"
+    reviewsHostname: "http://bookinfo-reviews-dev:9080"
+    floodFactor: "0"

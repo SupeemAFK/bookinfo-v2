@@ -1,0 +1,11 @@
+ingress:
+  name: bookinfo-ingress-dev
+  enabled: true
+  className: nginx
+  host: bookinfo-supeem-dev.opsta.in.th
+  tls:
+    enabled: true
+    secretName: bookinfo-tls-secret
+    issuer: letsencrypt-prod
+  service:
+    name: bookinfo-productpage-dev

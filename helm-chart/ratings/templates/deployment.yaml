@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ratings-{{ .Values.ratings.version }}
+  labels:
+    app: ratings
+    version: {{ .Values.ratings.version }}
+spec:
+  replicas: {{ .Values.ratings.replicas }}
+  selector:
+    matchLabels:
+      app: ratings
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: ratings
+        version: v1
+    spec:
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.imagePullSecrets }}
+        - name: {{ .name }}
+        {{- end }}
+      {{- end }}
+      containers:
+      - name: ratings
+        image: "{{ .Values.ratings.image.repository }}:{{ .Values.ratings.image.tag }}"
+        imagePullPolicy: {{ .Values.ratings.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.ratings.service.port }}
+        env:
+        - name: SERVICE_VERSION
+          value: "{{ .Values.ratings.env.version }}"
+        - name: MONGO_DB_URL
+          value: "{{ .Values.ratings.env.mongoUrl }}"
+        - name: MONGO_DB_NAME
+          value: "{{ .Values.ratings.env.dbName }}"
+        
+        - name: MONGO_DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.ratings.mongodbSecret.name }}
+              key: {{ .Values.ratings.mongodbSecret.usernameKey }}
+        - name: MONGO_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.ratings.mongodbSecret.name }}
+              key: {{ .Values.ratings.mongodbSecret.passwordKey }}
