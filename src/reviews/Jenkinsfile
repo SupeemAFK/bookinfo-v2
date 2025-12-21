@@ -79,9 +79,7 @@ spec:
             steps {
                 container('helm') {
                     echo "Upgrading release ${env.RELEASE_NAME} in namespace ${env.NAMESPACE}"
-                    sh """
-                        helm dependency update ${env.CHART_DIR}
-                        
+                    sh """                        
                         helm upgrade --install ${env.RELEASE_NAME} ${env.CHART_DIR} \
                             --namespace ${env.NAMESPACE} \
                             -f ${env.VALUES_FILE} \
