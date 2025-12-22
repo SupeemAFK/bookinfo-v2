@@ -104,8 +104,7 @@ spec:
                     sh '''                        
                         /usr/share/dependency-check/bin/dependency-check.sh \
                         --project "Bookinfo-productpage" \
-                        --scan ./requirements.txt \
-                        --scan . \
+                        --scan ./src/productpage/requirements.txt \
                         --format HTML \
                         --format XML \
                         --out . \
