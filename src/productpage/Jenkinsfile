@@ -233,17 +233,19 @@ spec:
             }
             post {
                 always {
-                    if (fileExists("zap-reports/zap-report.html")) {
-                        archiveArtifacts artifacts: 'zap-reports/zap-report.html', fingerprint: true
-                        
-                        publishHTML([
-                            allowMissing: false,
-                            alwaysLinkToLastBuild: true,
-                            keepAll: true,
-                            reportDir: 'zap-reports',
-                            reportFiles: 'zap-report.html',
-                            reportName: 'OWASP-ZAP-Report'
-                        ])
+                    script {
+                        if (fileExists("zap-reports/zap-report.html")) {
+                            archiveArtifacts artifacts: 'zap-reports/zap-report.html', fingerprint: true
+                            
+                            publishHTML([
+                                allowMissing: false,
+                                alwaysLinkToLastBuild: true,
+                                keepAll: true,
+                                reportDir: 'zap-reports',
+                                reportFiles: 'zap-report.html',
+                                reportName: 'OWASP-ZAP-Report'
+                            ])
+                        }
                     }
                 }
             }
