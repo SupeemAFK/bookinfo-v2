@@ -105,6 +105,14 @@ spec:
             post {
                 always {
                     archiveArtifacts artifacts: 'results.html,results.json', fingerprint: true
+                    publishHTML([
+                        allowMissing: false,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: '.',
+                        reportFiles: 'results.html',
+                        reportName: 'KICS IaC Report'
+                    ])
                 }
             }
         }
@@ -170,12 +178,16 @@ spec:
         stage('Image Scan (Trivy)') {
             steps {
                 container('trivy') {
-                    sh "trivy image --severity HIGH,CRITICAL --exit-code 0 ${env.FULL_IMAGE}:${env.GIT_TAG} --format json -o trivy-results.json"
+                    sh "trivy image --severity HIGH,CRITICAL --format template --template '@/contrib/html.tpl' -o trivy-report.html ${env.FULL_IMAGE}:${env.GIT_TAG}"
                 }
             }
             post {
                 always {
-                    archiveArtifacts artifacts: 'trivy-results.json', fingerprint: true
+                    publishHTML([
+                        reportDir: '.',
+                        reportFiles: 'trivy-report.html',
+                        reportName: 'Trivy Image Scan'
+                    ])
                 }
             }
         }
@@ -206,6 +218,14 @@ spec:
             post {
                 always {
                     archiveArtifacts artifacts: 'zap-report.html', fingerprint: true
+                    publishHTML([
+                        allowMissing: false,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: '.',
+                        reportFiles: 'zap-report.html',
+                        reportName: 'OWASP ZAP DAST Report'
+                    ])
                 }
             }
         }
