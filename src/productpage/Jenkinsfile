@@ -74,7 +74,7 @@ spec:
         NAMESPACE    = "${env.SAFE_BRANCH == 'main' ? 'bookinfo-uat' : 'bookinfo-dev'}"
         VALUES_FILE  = "${env.SAFE_BRANCH == 'main' ? 'helm-chart/productpage/uat-productpage-values.yaml' : 'helm-chart/productpage/dev-productpage-values.yaml'}"
 
-        APP_URL      = "http://productpage.${env.NAMESPACE}.svc.cluster.local:9080" 
+        APP_URL      = "http://bookinfo-productpage-${SAFE_BRANCH}:9080" 
     }
 
     stages {
