@@ -35,6 +35,7 @@ spec:
     volumeMounts:
     - name: sca-data
       mountPath: /usr/share/dependency-check/data
+      subPath: "bookinfo-scan"
   - name: trivy
     image: aquasec/trivy:latest
     command: ['cat']
@@ -62,17 +63,18 @@ spec:
         REGISTRY_URL = "registry-supeem.opsta.in.th"
         IMAGE_PATH   = "library/productpage-service"
         FULL_IMAGE   = "${REGISTRY_URL}/${IMAGE_PATH}"
+
         CHART_DIR    = "helm-chart/productpage"
-        
-        SONAR_SERVER_NAME = "https://sast-supeem.opsta.in.th" 
+
+        SONAR_SERVER_URL = "https://sast-supeem.opsta.in.th"
         SONAR_PROJECT_KEY = "SupeemAFK_bookinfo_8304fcdc-fe26-4b19-a892-84f8f847e9df"
 
-        SAFE_BRANCH  = "${env.BRANCH_NAME ?: 'dev'}"
+        SAFE_BRANCH  = "${env.BRANCH_NAME != null ? env.BRANCH_NAME : 'dev'}"
         RELEASE_NAME = "${env.SAFE_BRANCH == 'main' ? 'bookinfo-productpage-uat' : 'bookinfo-productpage-dev'}"
         NAMESPACE    = "${env.SAFE_BRANCH == 'main' ? 'bookinfo-uat' : 'bookinfo-dev'}"
-        VALUES_FILE  = "helm-chart/productpage/${env.SAFE_BRANCH == 'main' ? 'uat' : 'dev'}-productpage-values.yaml"
-        
-        APP_URL      = "http://productpage.${env.SAFE_BRANCH}.svc.cluster.local:9080"
+        VALUES_FILE  = "${env.SAFE_BRANCH == 'main' ? 'helm-chart/productpage/uat-productpage-values.yaml' : 'helm-chart/productpage/dev-productpage-values.yaml'}"
+
+        APP_URL      = "http://productpage.bookinfo-${SAFE_BRANCH}.svc.cluster.local:9080" 
     }
 
     stages {
@@ -91,6 +93,7 @@ spec:
             }
         }
 
+        
         stage('IaC Scan (KICS)') {
             steps {
                 container('kics') {
@@ -99,6 +102,7 @@ spec:
             }
             post {
                 always {
+                    archiveArtifacts artifacts: 'results.html,results.json', fingerprint: true
                     publishHTML([
                         allowMissing: false,
                         alwaysLinkToLastBuild: true,
@@ -114,21 +118,17 @@ spec:
         stage('Static Analysis (SonarQube)') {
             steps {
                 container('sonar-scanner') {
-                    withSonarQubeEnv("${env.SONAR_SERVER_NAME}") {
-                        sh """
+                    withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
+                        sh '''
                             sonar-scanner \
-                            -Dsonar.projectKey=${env.SONAR_PROJECT_KEY} \
+                            -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
                             -Dsonar.sources=src/productpage \
-                            -Dsonar.qualitygate.wait=true
-                        """
+                            -Dsonar.host.url=${SONAR_SERVER_URL} \
+                            -Dsonar.login=${SONAR_TOKEN} \
+                            -Dsonar.qualitygate.wait=true \
+                            -Dsonar.qualitygate.timeout=300
+                        '''
                     }
-                }
-            }
-        }
-        stage("Quality Gate") {
-            steps {
-                timeout(time: 1, unit: 'HOURS') {
-                    waitForQualityGate abortPipeline: true
                 }
             }
         }
@@ -136,12 +136,20 @@ spec:
         stage('SCA (Dependency-Check)') {
             steps {
                 container('dependency-check') {
-                    sh "/usr/share/dependency-check/bin/dependency-check.sh --project 'Bookinfo' --scan './src/productpage' --format 'ALL' --out ."
+                    sh '''                        
+                        /usr/share/dependency-check/bin/dependency-check.sh \
+                        --project "Bookinfo-productpage" \
+                        --scan ./src/productpage/requirements.txt \
+                        --format HTML \
+                        --format XML \
+                        --out . \
+                        --enableExperimental
+                    '''
                 }
             }
             post {
                 always {
-                    dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+                    dependencyCheckPublisher pattern: '**/dependency-check-report.xml'                    
                 }
             }
         }
@@ -151,12 +159,12 @@ spec:
                 container('docker') {
                     script {
                         def registryUrl = "https://${REGISTRY_URL}".toString()
-                        def credsId     = 'registry-bookinfo'
+                        def credentialsId = 'registry-bookinfo'
 
-                        docker.withRegistry(registryUrl, credsId) {
+                        docker.withRegistry(registryUrl, credentialsId) {
                             def myImage = docker.build("${env.FULL_IMAGE}:${env.GIT_TAG}", "./src/productpage")
-                            retry(3) { 
-                                myImage.push() 
+                            retry(3) {
+                                myImage.push()
                             }
                         }
                     }
@@ -168,26 +176,34 @@ spec:
             steps {
                 container('trivy') {
                     sh "trivy image --severity HIGH,CRITICAL --format template --template '@/contrib/html.tpl' -o trivy-results.html ${env.FULL_IMAGE}:${env.GIT_TAG}"
+                    sh """
+                        mkdir -p trivy-html-report
+                        cp trivy-results.html trivy-html-report/index.html
+                        chmod -R 755 trivy-html-report
+                    """
                 }
             }
             post {
                 always {
-                    publishHTML([
-                        allowMissing: false,
-                        alwaysLinkToLastBuild: true,
-                        keepAll: true,
-                        reportDir: '.',
-                        reportFiles: 'trivy-results.html',
-                        reportName: 'Trivy Image Scan'
-                    ])
+                    script {
+                        archiveArtifacts artifacts: 'trivy-results.html', fingerprint: true
+                        publishHTML([
+                            allowMissing: false,
+                            alwaysLinkToLastBuild: true,
+                            keepAll: true,
+                            reportDir: 'trivy-html-report',
+                            reportFiles: 'index.html',
+                            reportName: 'Trivy-Image-Scan'
+                        ])
+                    }
                 }
             }
         }
 
-        stage('Deploy (Helm)') {
+        stage('Deploy to K8s (Helm)') {
             steps {
                 container('helm') {
-                    sh """
+                    sh """                       
                         helm upgrade --install ${env.RELEASE_NAME} ${env.CHART_DIR} \
                             --namespace ${env.NAMESPACE} \
                             -f ${env.VALUES_FILE} \
@@ -201,19 +217,41 @@ spec:
         stage('DAST (OWASP ZAP)') {
             steps {
                 container('zap') {
-                    sh "zap-baseline.py -t ${env.APP_URL} -r zap-report.html || true"
+                    script {
+                        sh "chmod 777 ."
+                        sh "ln -s \$(pwd) /zap/wrk"
+
+                        sh """
+                            zap-baseline.py -t ${env.APP_URL} \
+                            -r zap-report.html \
+                            -z "-config connection.timeoutInSecs=60" || true
+                        """
+
+                        if (fileExists('zap-report.html')) {
+                            sh "mkdir -p zap-out && cp zap-report.html zap-out/index.html && chmod -R 755 zap-out"
+                        } 
+                        else {
+                            echo "ZAP Failed. Running debug..."
+                            sh "nslookup \$(echo ${env.APP_URL} | sed 's|http://||' | cut -d: -f1)"
+                        }
+                    }
                 }
             }
             post {
                 always {
-                    publishHTML([
-                        allowMissing: false,
-                        alwaysLinkToLastBuild: true,
-                        keepAll: true,
-                        reportDir: '.',
-                        reportFiles: 'zap-report.html',
-                        reportName: 'OWASP ZAP Report'
-                    ])
+                    script {
+                        if (fileExists('zap-out/index.html')) {
+                            archiveArtifacts artifacts: 'zap-report.html', fingerprint: true
+                            publishHTML([
+                                allowMissing: false,
+                                alwaysLinkToLastBuild: true,
+                                keepAll: true,
+                                reportDir: 'zap-out',
+                                reportFiles: 'index.html',
+                                reportName: 'OWASP-ZAP-DAST'
+                            ])
+                        }
+                    }
                 }
             }
         }
