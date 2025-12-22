@@ -104,7 +104,7 @@ spec:
             }
             post {
                 always {
-                    archiveArtifacts artifacts: 'results.html,results.json', fingerprint: true
+                    archiveArtifacts artifacts: 'kics-results.html,kics-results.json', fingerprint: true
                 }
             }
         }
@@ -193,14 +193,14 @@ spec:
             steps {
                 container('zap') {
                     script {
-                        sh "chmod 777 ."
-                        sh "zap-baseline.py -t ${env.APP_URL} -r zap_report.html || true"
+                        sh "chmod 777 ${WORKSPACE}"
+                        sh "zap-baseline.py -t ${env.APP_URL} -r zap-report.html || true"
                     }
                 }
             }
             post {
                 always {
-                    archiveArtifacts artifacts: 'zap_report.html', fingerprint: true, allowEmptyArchive: true
+                    archiveArtifacts artifacts: 'zap-report.html', fingerprint: true
                 }
             }
         }
