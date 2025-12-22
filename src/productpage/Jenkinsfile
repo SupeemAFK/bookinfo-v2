@@ -118,6 +118,11 @@ spec:
                         """
                 }
             }
+            post {
+                always {
+                    dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+                }
+            }
         }
 
         stage('Build & Push to Harbor') {
