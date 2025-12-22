@@ -221,18 +221,25 @@ spec:
             steps {
                 container('zap') {
                     script {
+                        sh "chmod 777 ."
+
                         sh "ln -s \$(pwd) /zap/wrk"
-                        sh "zap-baseline.py -t ${env.APP_URL} -r zap-report.html || true"
-                        
+
+                        sh """
+                            zap-baseline.py -t ${env.APP_URL} \
+                            -r zap-report.html \
+                            -z "-config connection.timeoutInSecs=60" || true
+                        """
+
                         if (fileExists('zap-report.html')) {
                             sh """
                                 mkdir -p zap-out
                                 cp zap-report.html zap-out/index.html
                                 chmod -R 755 zap-out
                             """
-                        } 
+                        }
                         else {
-                            echo "ERROR: zap-report.html was not generated. The scan likely failed."
+                            echo "No file exist FAILEDDDDD"
                         }
                     }
                 }
