@@ -30,6 +30,8 @@ spec:
     image: owasp/dependency-check:latest
     command: ['cat']
     tty: true
+    securityContext:
+      runAsUser: 0
     volumeMounts:
     - name: sca-data
       mountPath: /usr/share/dependency-check/data
@@ -100,6 +102,7 @@ spec:
             steps {
                 container('dependency-check') {
                     sh """
+                            mkdir -p /usr/share/dependency-check/data
                             chmod -R 777 /usr/share/dependency-check/data
                             rm -f /usr/share/dependency-check/data/*.lock.db
                         """
