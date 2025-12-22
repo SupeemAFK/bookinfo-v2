@@ -99,7 +99,14 @@ spec:
             }
             post {
                 always {
-                    publishHTML([reportDir: '.', reportFiles: 'results.html', reportName: 'KICS IaC Report'])
+                    publishHTML([
+                        allowMissing: false,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: '.',
+                        reportFiles: 'results.html',
+                        reportName: 'KICS IaC Report'
+                    ])
                 }
             }
         }
@@ -165,7 +172,14 @@ spec:
             }
             post {
                 always {
-                    publishHTML([reportDir: '.', reportFiles: 'trivy-results.html', reportName: 'Trivy Scan'])
+                    publishHTML([
+                        allowMissing: false,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: '.',
+                        reportFiles: 'trivy-results.html',
+                        reportName: 'Trivy Image Scan'
+                    ])
                 }
             }
         }
@@ -192,7 +206,14 @@ spec:
             }
             post {
                 always {
-                    publishHTML([reportDir: '.', reportFiles: 'zap-report.html', reportName: 'ZAP Report'])
+                    publishHTML([
+                        allowMissing: false,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: '.',
+                        reportFiles: 'zap-report.html',
+                        reportName: 'OWASP ZAP Report'
+                    ])
                 }
             }
         }
