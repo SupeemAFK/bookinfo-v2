@@ -221,30 +221,30 @@ spec:
             steps {
                 container('zap') {
                     script {
-                        sh """
-                            zap-baseline.py -t ${env.APP_URL} \
-                            -r zap-report.html || true
-                        """
+                        sh "mkdir -p ${WORKSPACE}/zap-reports"
+                        sh "chmod 777 ${WORKSPACE}/zap-reports"
 
                         sh """
-                            mkdir -p zap-reports
-                            cp zap-report.html zap-reports/index.html
-                            chmod -R 755 zap-report.html
+                            zap-baseline.py -t ${env.APP_URL} \
+                            -r ${WORKSPACE}/zap-reports/zap-report.html || true
                         """
                     }
                 }
             }
             post {
                 always {
-                    archiveArtifacts artifacts: 'zap-report.html', fingerprint: true
-                    publishHTML([
-                        allowMissing: false,
-                        alwaysLinkToLastBuild: true,
-                        keepAll: true,
-                        reportDir: 'zap-reports',
-                        reportFiles: 'index.html',
-                        reportName: 'OWASP-ZAP-Report'
-                    ])
+                    if (fileExists("zap-reports/zap-report.html")) {
+                        archiveArtifacts artifacts: 'zap-reports/zap-report.html', fingerprint: true
+                        
+                        publishHTML([
+                            allowMissing: false,
+                            alwaysLinkToLastBuild: true,
+                            keepAll: true,
+                            reportDir: 'zap-reports',
+                            reportFiles: 'zap-report.html',
+                            reportName: 'OWASP-ZAP-Report'
+                        ])
+                    }
                 }
             }
         }
