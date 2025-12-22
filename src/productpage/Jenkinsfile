@@ -178,16 +178,25 @@ spec:
         stage('Image Scan (Trivy)') {
             steps {
                 container('trivy') {
-                    sh "trivy image --severity HIGH,CRITICAL --format template --template '@/contrib/html.tpl' -o trivy-report.html ${env.FULL_IMAGE}:${env.GIT_TAG}"
+                    sh "trivy image --severity HIGH,CRITICAL --format template --template '@/contrib/html.tpl' -o trivy-results.html ${env.FULL_IMAGE}:${env.GIT_TAG}"
                 }
             }
             post {
                 always {
-                    publishHTML([
-                        reportDir: '.',
-                        reportFiles: 'trivy-report.html',
-                        reportName: 'Trivy Image Scan'
-                    ])
+                    script {
+                        def reportExists = writeFile file: 'check.txt', text: 'exists' 
+                        if (fileExists('trivy-results.html')) {
+                            archiveArtifacts artifacts: 'trivy-results.html', fingerprint: true
+                            publishHTML([
+                                allowMissing: false,
+                                alwaysLinkToLastBuild: true,
+                                keepAll: true,
+                                reportDir: '.',
+                                reportFiles: 'trivy-results.html',
+                                reportName: 'Trivy Image Scan'
+                            ])
+                        }
+                    }
                 }
             }
         }
