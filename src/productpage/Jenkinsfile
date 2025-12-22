@@ -179,12 +179,12 @@ spec:
             steps {
                 container('trivy') {
                     sh "trivy image --severity HIGH,CRITICAL --format template --template '@/contrib/html.tpl' -o trivy-results.html ${env.FULL_IMAGE}:${env.GIT_TAG}"
+                    sh "chmod 644 trivy-report.html"
                 }
             }
             post {
                 always {
                     script {
-                        def reportExists = writeFile file: 'check.txt', text: 'exists' 
                         if (fileExists('trivy-results.html')) {
                             archiveArtifacts artifacts: 'trivy-results.html', fingerprint: true
                             publishHTML([
