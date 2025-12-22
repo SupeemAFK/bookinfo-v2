@@ -221,31 +221,38 @@ spec:
             steps {
                 container('zap') {
                     script {
-                        sh """
-                            zap-baseline.py -t ${env.APP_URL} \
-                            -r zap-results.html || true
-                        """
+                        sh "chmod 777 ."
+                        sh "ln -s \$(pwd) /zap/wrk"
 
                         sh """
-                            mkdir -p zap-html-report
-                            cp zap-results.html zap-html-report/index.html
-                            chmod -R 755 zap-html-report
+                            zap-baseline.py -t ${env.APP_URL} \
+                            -r zap-report.html || true
                         """
+
+                        if (fileExists('zap-report.html')) {
+                            sh "mkdir -p zap-out && cp zap-report.html zap-out/index.html && chmod -R 755 zap-out"
+                        } 
+                        else {
+                            echo "ZAP Failed. Running debug..."
+                            sh "nslookup \$(echo ${env.APP_URL} | sed 's|http://||' | cut -d: -f1)"
+                        }
                     }
                 }
             }
             post {
                 always {
                     script {
-                        archiveArtifacts artifacts: 'zap-results.html', fingerprint: true
-                        publishHTML([
-                            allowMissing: false,
-                            alwaysLinkToLastBuild: true,
-                            keepAll: true,
-                            reportDir: 'zap-html-report',
-                            reportFiles: 'index.html',
-                            reportName: 'OWASP-ZAP-Report'
-                        ])
+                        if (fileExists('zap-out/index.html')) {
+                            archiveArtifacts artifacts: 'zap-report.html', fingerprint: true
+                            publishHTML([
+                                allowMissing: false,
+                                alwaysLinkToLastBuild: true,
+                                keepAll: true,
+                                reportDir: 'zap-out',
+                                reportFiles: 'index.html',
+                                reportName: 'OWASP-ZAP-DAST'
+                            ])
+                        }
                     }
                 }
             }
