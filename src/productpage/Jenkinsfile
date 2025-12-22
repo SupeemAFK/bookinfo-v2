@@ -33,6 +33,7 @@ spec:
     volumeMounts:
     - name: sca-data
       mountPath: /usr/share/dependency-check/data
+      subPath: "bookinfo-scan"
   volumes:
   - name: docker-sock
     hostPath:
@@ -98,17 +99,20 @@ spec:
         stage('SCA (Dependency-Check)') {
             steps {
                 container('dependency-check') {
-                    sh "rm -f /usr/share/dependency-check/data/*.lock.db"
+                    sh """
+                            chmod -R 777 /usr/share/dependency-check/data
+                            rm -f /usr/share/dependency-check/data/*.lock.db
+                        """
                 
                     sh """
-                        /usr/share/dependency-check/bin/dependency-check.sh \
-                            --scan '${WORKSPACE}/src/productpage/requirements.txt' \
-                            --data '/usr/share/dependency-check/data' \
-                            --format HTML \
-                            --project 'Bookinfo' \
-                            --out '${WORKSPACE}' \
-                            --enableRetired
-                    """
+                            /usr/share/dependency-check/bin/dependency-check.sh \
+                                --scan '${WORKSPACE}/src/productpage/requirements.txt' \
+                                --data '/usr/share/dependency-check/data' \
+                                --format HTML \
+                                --project 'Bookinfo' \
+                                --out '${WORKSPACE}' \
+                                --enableRetired
+                        """
                 }
             }
         }
