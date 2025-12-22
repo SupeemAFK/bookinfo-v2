@@ -221,12 +221,14 @@ spec:
             steps {
                 container('zap') {
                     script {
-                        sh "mkdir -p ${WORKSPACE}/zap-reports"
-                        sh "chmod 777 ${WORKSPACE}/zap-reports"
-
                         sh """
-                            zap-baseline.py -t ${env.APP_URL} \
-                            -r ${WORKSPACE}/zap-reports/zap-report.html || true
+                            ln -s \$(pwd) /zap/wrk
+                            zap-baseline.py -t ${env.APP_URL} -r zap-report.html || true
+                        """
+                        sh """
+                            mkdir -p zap-out
+                            cp zap-report.html zap-out/index.html
+                            chmod -R 755 zap-out
                         """
                     }
                 }
@@ -234,16 +236,15 @@ spec:
             post {
                 always {
                     script {
-                        if (fileExists("zap-reports/zap-report.html")) {
-                            archiveArtifacts artifacts: 'zap-reports/zap-report.html', fingerprint: true
-                            
+                        if (fileExists('zap-report.html')) {
+                            archiveArtifacts artifacts: 'zap-report.html', fingerprint: true
                             publishHTML([
                                 allowMissing: false,
                                 alwaysLinkToLastBuild: true,
                                 keepAll: true,
-                                reportDir: 'zap-reports',
-                                reportFiles: 'zap-report.html',
-                                reportName: 'OWASP-ZAP-Report'
+                                reportDir: 'zap-out',
+                                reportFiles: 'index.html',
+                                reportName: 'OWASP-ZAP-DAST'
                             ])
                         }
                     }
