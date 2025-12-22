@@ -99,7 +99,7 @@ spec:
         stage('IaC Scan (KICS)') {
             steps {
                 container('kics') {
-                    sh "/app/bin/kics scan -p ${env.CHART_DIR} --report-formats html,json -o ."
+                    sh "/app/bin/kics scan -p ${env.CHART_DIR} --fail-on high,critical --report-formats html,json -o ."
                 }
             }
             post {
