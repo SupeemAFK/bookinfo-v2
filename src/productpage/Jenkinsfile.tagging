@@ -60,7 +60,8 @@ spec:
         stage('Promote Docker Image') {
             steps {
                 container('docker') {
-                    docker.withRegistry("https://${REGISTRY_URL}", 'registry-bookinfo') {
+                    script {
+                        docker.withRegistry("https://${REGISTRY_URL}", 'registry-bookinfo')
                         def sourceImg = docker.image("${env.FULL_IMAGE}:${env.SHORT_HASH}")
                         sourceImg.pull()
 

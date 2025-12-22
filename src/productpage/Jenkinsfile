@@ -159,7 +159,8 @@ spec:
         stage('Build & Push to Harbor') {
             steps {
                 container('docker') {
-                    docker.withRegistry("https://${REGISTRY_URL}", 'registry-bookinfo') {
+                    script {
+                        docker.withRegistry("https://${REGISTRY_URL}", 'registry-bookinfo')
                         def myImage = docker.build("${env.FULL_IMAGE}:${env.GIT_TAG}", "./src/productpage")
                         myImage.push()
                     }
