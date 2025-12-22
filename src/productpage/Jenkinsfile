@@ -104,7 +104,7 @@ spec:
             }
             post {
                 always {
-                    archiveArtifacts artifacts: 'kics-results.html,kics-results.json', fingerprint: true
+                    archiveArtifacts artifacts: 'results.html,results.json', fingerprint: true
                 }
             }
         }
@@ -170,7 +170,12 @@ spec:
         stage('Image Scan (Trivy)') {
             steps {
                 container('trivy') {
-                    sh "trivy image --severity HIGH,CRITICAL --exit-code 0 ${env.FULL_IMAGE}:${env.GIT_TAG}"
+                    sh "trivy image --severity HIGH,CRITICAL --exit-code 0 ${env.FULL_IMAGE}:${env.GIT_TAG} --format json -o trivy-results.json"
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'trivy-results.json', fingerprint: true
                 }
             }
         }
