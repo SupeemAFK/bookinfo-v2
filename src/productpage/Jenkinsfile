@@ -98,30 +98,33 @@ spec:
             }
         }
 
-        stage('SCA (Dependency-Check)') {
+        stage('OWASP Dependency Check') {
             steps {
                 container('dependency-check') {
-                    sh """
-                            mkdir -p /usr/share/dependency-check/data
-                            chmod -R 777 /usr/share/dependency-check/data
-                            rm -f /usr/share/dependency-check/data/*.lock.db
-                        """
-                
-                    sh """
-                            /usr/share/dependency-check/bin/dependency-check.sh \
-                                --scan '${WORKSPACE}/src/productpage/requirements.txt' \
-                                --data '/usr/share/dependency-check/data' \
-                                --format HTML \
-                                --project 'Bookinfo' \
-                                --out '${WORKSPACE}' \
-                                --enableRetired
-                        """
+                    sh '''
+                        /usr/share/dependency-check/bin/dependency-check.sh \
+                        --project "MyProject" \
+                        --scan . \
+                        --format HTML \
+                        --format XML \
+                        --out . \
+                        --nvdApiKey ${NVD_API_KEY}
+                    '''
                 }
             }
-            post {
-                always {
-                    dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
-                }
+        }
+        post {
+            always {
+                dependencyCheckPublisher pattern: 'dependency-check-report.xml'
+                
+                publishHTML([
+                    allowMissing: false,
+                    alwaysLinkToLastBuild: true,
+                    keepAll: true,
+                    reportDir: '.', 
+                    reportFiles: 'dependency-check-report.html',
+                    reportName: 'Dependency Check HTML Report'
+                ])
             }
         }
 
