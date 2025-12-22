@@ -74,7 +74,7 @@ spec:
         NAMESPACE    = "${env.SAFE_BRANCH == 'main' ? 'bookinfo-uat' : 'bookinfo-dev'}"
         VALUES_FILE  = "${env.SAFE_BRANCH == 'main' ? 'helm-chart/productpage/uat-productpage-values.yaml' : 'helm-chart/productpage/dev-productpage-values.yaml'}"
 
-        APP_URL      = "http://bookinfo-productpage-${SAFE_BRANCH}:9080" 
+        APP_URL      = "http://productpage.bookinfo-${SAFE_BRANCH}.svc.cluster.local:9080" 
     }
 
     stages {
@@ -222,24 +222,20 @@ spec:
                 container('zap') {
                     script {
                         sh "chmod 777 ."
-
                         sh "ln -s \$(pwd) /zap/wrk"
 
                         sh """
                             zap-baseline.py -t ${env.APP_URL} \
                             -r zap-report.html \
+                            --autooff \
                             -z "-config connection.timeoutInSecs=60" || true
                         """
 
                         if (fileExists('zap-report.html')) {
-                            sh """
-                                mkdir -p zap-out
-                                cp zap-report.html zap-out/index.html
-                                chmod -R 755 zap-out
-                            """
-                        }
-                        else {
-                            echo "No file exist FAILEDDDDD"
+                            sh "mkdir -p zap-out && cp zap-report.html zap-out/index.html && chmod -R 755 zap-out"
+                        } else {
+                            echo "ZAP Failed. Running debug..."
+                            sh "nslookup \$(echo ${env.APP_URL} | sed 's|http://||' | cut -d: -f1)"
                         }
                     }
                 }
