@@ -179,23 +179,25 @@ spec:
             steps {
                 container('trivy') {
                     sh "trivy image --severity HIGH,CRITICAL --format template --template '@/contrib/html.tpl' -o trivy-results.html ${env.FULL_IMAGE}:${env.GIT_TAG}"
-                    sh "chmod 644 trivy-report.html"
+                    sh """
+                        mkdir -p trivy-html-report
+                        cp trivy-results.html trivy-html-report/index.html
+                        chmod -R 755 trivy-html-report
+                    """
                 }
             }
             post {
                 always {
                     script {
-                        if (fileExists('trivy-results.html')) {
-                            archiveArtifacts artifacts: 'trivy-results.html', fingerprint: true
-                            publishHTML([
-                                allowMissing: false,
-                                alwaysLinkToLastBuild: true,
-                                keepAll: true,
-                                reportDir: '.',
-                                reportFiles: 'trivy-results.html',
-                                reportName: 'Trivy Image Scan'
-                            ])
-                        }
+                        archiveArtifacts artifacts: 'trivy-results.html', fingerprint: true
+                        publishHTML([
+                            allowMissing: false,
+                            alwaysLinkToLastBuild: true,
+                            keepAll: true,
+                            reportDir: 'trivy-html-report',
+                            reportFiles: 'index.html',
+                            reportName: 'Trivy-Image-Scan'
+                        ])
                     }
                 }
             }
