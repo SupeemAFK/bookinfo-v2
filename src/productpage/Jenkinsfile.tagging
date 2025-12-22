@@ -60,26 +60,13 @@ spec:
         stage('Promote Docker Image') {
             steps {
                 container('docker') {
-                    withCredentials([usernamePassword(credentialsId: 'registry-bookinfo', usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
-                        sh "mkdir -p ${WORKSPACE}/.docker"
-                        withEnv(["DOCKER_CONFIG=${WORKSPACE}/.docker"]) {
-                            script {
-                                retry(3) {
-                                    sh 'printenv REG_PASS | docker login $REGISTRY_URL -u $REG_USER --password-stdin'
-                                }
+                    docker.withRegistry("https://${REGISTRY_URL}", 'registry-bookinfo') {
+                        def sourceImg = docker.image("${env.FULL_IMAGE}:${env.SHORT_HASH}")
+                        sourceImg.pull()
 
-                                echo "Pulling source image: ${env.FULL_IMAGE}:${env.SHORT_HASH}"
-                                sh "docker pull ${env.FULL_IMAGE}:${env.SHORT_HASH}"
-
-                                echo "Retagging to: ${env.FULL_IMAGE}:${params.RELEASE_VERSION}"
-                                sh "docker tag ${env.FULL_IMAGE}:${env.SHORT_HASH} ${env.FULL_IMAGE}:productpage/${params.RELEASE_VERSION}"
-
-                                retry(3) {
-                                    sh "docker push ${env.FULL_IMAGE}:productpage/${params.RELEASE_VERSION}"
-                                }
-                            }
-                        }
+                        sourceImg.push("productpage-${params.RELEASE_VERSION}")
                         
+                        echo "Successfully pushed native tag: productpage-${params.RELEASE_VERSION}"
                     }
                 }
             }
@@ -91,7 +78,7 @@ spec:
                     sh 'git config user.email "jenkins@opsta.in.th"'
                     sh 'git config user.name "Jenkins Bot"'
 
-                    sh "git tag -a productpage/${params.RELEASE_VERSION} -m 'Release productpage/${params.RELEASE_VERSION}'"
+                    sh "git tag -a productpage-${params.RELEASE_VERSION} -m 'Release productpage-${params.RELEASE_VERSION}'"
                     
                     withCredentials([sshUserPrivateKey(credentialsId: env.GIT_CREDS, keyFileVariable: 'SSH_KEY_FILE')]) {
                         sh """
