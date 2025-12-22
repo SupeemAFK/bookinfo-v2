@@ -36,6 +36,18 @@ spec:
     - name: sca-data
       mountPath: /usr/share/dependency-check/data
       subPath: "bookinfo-scan"
+  - name: trivy
+    image: aquasec/trivy:latest
+    command: ['cat']
+    tty: true
+  - name: zap
+    image: ghcr.io/zaproxy/zaproxy:stable
+    command: ['sh', '-c', 'cat']
+    tty: true
+  - name: kics
+    image: checkmarx/kics:latest
+    command: ['cat']
+    tty: true
   volumes:
   - name: docker-sock
     hostPath:
@@ -58,10 +70,11 @@ spec:
         SONAR_PROJECT_KEY = "SupeemAFK_bookinfo_8304fcdc-fe26-4b19-a892-84f8f847e9df"
 
         SAFE_BRANCH  = "${env.BRANCH_NAME != null ? env.BRANCH_NAME : 'dev'}"
-
         RELEASE_NAME = "${env.SAFE_BRANCH == 'main' ? 'bookinfo-productpage-uat' : 'bookinfo-productpage-dev'}"
         NAMESPACE    = "${env.SAFE_BRANCH == 'main' ? 'bookinfo-uat' : 'bookinfo-dev'}"
         VALUES_FILE  = "${env.SAFE_BRANCH == 'main' ? 'helm-chart/productpage/uat-productpage-values.yaml' : 'helm-chart/productpage/dev-productpage-values.yaml'}"
+
+        APP_URL      = "http://productpage.${env.NAMESPACE}.svc.cluster.local:9080" 
     }
 
     stages {
@@ -78,6 +91,19 @@ spec:
                         ])
                     }
                     env.GIT_TAG = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+                }
+            }
+        }
+
+        stage('IaC Scan (KICS)') {
+            steps {
+                container('kics') {
+                    sh "/app/bin/kics scan -p ${env.CHART_DIR} --report-formats html,json -o ."
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'results.html,results.json', fingerprint: true
                 }
             }
         }
@@ -138,6 +164,14 @@ spec:
             }
         }
 
+        stage('Image Scan (Trivy)') {
+            steps {
+                container('trivy') {
+                    sh "trivy image --severity HIGH,CRITICAL --exit-code 0 ${env.FULL_IMAGE}:${env.GIT_TAG}"
+                }
+            }
+        }
+
         stage('Deploy to K8s (Helm)') {
             steps {
                 container('helm') {
@@ -148,6 +182,21 @@ spec:
                             --set productpage.image.tag=${env.GIT_TAG} \
                             --wait
                     """
+                }
+            }
+        }
+
+        stage('DAST (OWASP ZAP)') {
+            steps {
+                container('zap') {
+                    script {
+                        sh "zap-baseline.py -t ${env.APP_URL} -r zap_report.html || true"
+                    }
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'zap_report.html', fingerprint: true
                 }
             }
         }
