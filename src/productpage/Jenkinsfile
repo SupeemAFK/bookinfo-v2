@@ -221,22 +221,26 @@ spec:
             steps {
                 container('zap') {
                     script {
-                        sh """
-                            ln -s \$(pwd) /zap/wrk
-                            zap-baseline.py -t ${env.APP_URL} -r zap-report.html || true
-                        """
-                        sh """
-                            mkdir -p zap-out
-                            cp zap-report.html zap-out/index.html
-                            chmod -R 755 zap-out
-                        """
+                        sh "ln -s \$(pwd) /zap/wrk"
+                        sh "zap-baseline.py -t ${env.APP_URL} -r zap-report.html || true"
+                        
+                        if (fileExists('zap-report.html')) {
+                            sh """
+                                mkdir -p zap-out
+                                cp zap-report.html zap-out/index.html
+                                chmod -R 755 zap-out
+                            """
+                        } 
+                        else {
+                            echo "ERROR: zap-report.html was not generated. The scan likely failed."
+                        }
                     }
                 }
             }
             post {
                 always {
                     script {
-                        if (fileExists('zap-report.html')) {
+                        if (fileExists('zap-out/index.html')) {
                             archiveArtifacts artifacts: 'zap-report.html', fingerprint: true
                             publishHTML([
                                 allowMissing: false,
