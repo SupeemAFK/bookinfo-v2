@@ -184,18 +184,15 @@ spec:
             post {
                 always {
                     script {
-                        def reportExists = writeFile file: 'check.txt', text: 'exists' 
-                        if (fileExists('trivy-results.html')) {
-                            archiveArtifacts artifacts: 'trivy-results.html', fingerprint: true
-                            publishHTML([
-                                allowMissing: false,
-                                alwaysLinkToLastBuild: true,
-                                keepAll: true,
-                                reportDir: '.',
-                                reportFiles: 'trivy-results.html',
-                                reportName: 'Trivy Image Scan'
-                            ])
-                        }
+                        darchiveArtifacts artifacts: 'trivy-results.html', fingerprint: true
+                        publishHTML([
+                            allowMissing: false,
+                            alwaysLinkToLastBuild: true,
+                            keepAll: true,
+                            reportDir: '.',
+                            reportFiles: 'trivy-results.html',
+                            reportName: 'Trivy Image Scan'
+                        ])
                     }
                 }
             }
