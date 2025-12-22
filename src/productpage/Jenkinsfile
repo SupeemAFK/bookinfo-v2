@@ -98,7 +98,7 @@ spec:
             }
         }
 
-        stage('OWASP Dependency Check') {
+        stage('SCA (Dependency-Check)') {
             steps {
                 container('dependency-check') {
                     sh '''
@@ -112,19 +112,19 @@ spec:
                     '''
                 }
             }
-        }
-        post {
-            always {
-                dependencyCheckPublisher pattern: 'dependency-check-report.xml'
-                
-                publishHTML([
-                    allowMissing: false,
-                    alwaysLinkToLastBuild: true,
-                    keepAll: true,
-                    reportDir: '.', 
-                    reportFiles: 'dependency-check-report.html',
-                    reportName: 'Dependency Check HTML Report'
-                ])
+            post {
+                always {
+                    dependencyCheckPublisher pattern: 'dependency-check-report.xml'
+                    
+                    publishHTML([
+                        allowMissing: false,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: '.', 
+                        reportFiles: 'dependency-check-report.html',
+                        reportName: 'Dependency Check HTML Report'
+                    ])
+                }
             }
         }
 
