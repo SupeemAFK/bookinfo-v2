@@ -113,13 +113,23 @@ spec:
             steps {
                 container('sonar-scanner') {
                     withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
-                        sh """
+                        sh '''
                             sonar-scanner \
-                              -Dsonar.projectKey=${env.SONAR_PROJECT_KEY} \
-                              -Dsonar.sources=src/productpage \
-                              -Dsonar.host.url=${env.SONAR_SERVER_URL} \
-                              -Dsonar.login=${SONAR_TOKEN}
-                        """
+                            -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                            -Dsonar.sources=src/productpage \
+                            -Dsonar.host.url=${SONAR_SERVER_URL} \
+                            -Dsonar.login=${SONAR_TOKEN} \
+                            -Dsonar.qualitygate.wait=true
+                        '''
+                    }
+                }
+                
+                timeout(time: 5, unit: 'MINUTES') {
+                    script {
+                        def qg = waitForQualityGate() 
+                        if (qg.status != 'OK') {
+                            error "Pipeline aborted due to quality gate failure: ${qg.status}"
+                        }
                     }
                 }
             }
@@ -176,13 +186,13 @@ spec:
         stage('Deploy to K8s (Helm)') {
             steps {
                 container('helm') {
-                    sh """                        
+                    sh '''                       
                         helm upgrade --install ${env.RELEASE_NAME} ${env.CHART_DIR} \
                             --namespace ${env.NAMESPACE} \
                             -f ${env.VALUES_FILE} \
                             --set productpage.image.tag=${env.GIT_TAG} \
                             --wait
-                    """
+                    '''
                 }
             }
         }
@@ -191,8 +201,8 @@ spec:
             steps {
                 container('zap') {
                     script {
-                        sh "chmod 777 ." 
-                        sh "zap-baseline.py -t ${env.APP_URL} -r zap_report.html || true"
+                        sh 'chmod 777 .' 
+                        sh 'zap-baseline.py -t ${env.APP_URL} -r zap_report.html || true'
                     }
                 }
             }
