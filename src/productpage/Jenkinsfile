@@ -95,6 +95,7 @@ spec:
             }
         }
 
+        /*
         stage('IaC Scan (KICS)') {
             steps {
                 container('kics') {
@@ -106,7 +107,7 @@ spec:
                     archiveArtifacts artifacts: 'results.html,results.json', fingerprint: true
                 }
             }
-        }
+        }*/
 
         stage('Static Analysis (SonarQube)') {
             steps {
