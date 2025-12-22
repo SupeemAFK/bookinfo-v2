@@ -98,6 +98,8 @@ spec:
         stage('SCA (Dependency-Check)') {
             steps {
                 container('dependency-check') {
+                    sh "rm -f /usr/share/dependency-check/data/*.lock.db"
+                    
                     sh """
                         /usr/share/dependency-check/bin/dependency-check.sh --updateonly --data /usr/share/dependency-check/data
                         /usr/share/dependency-check/bin/dependency-check.sh \
