@@ -229,30 +229,22 @@ spec:
                             -r zap-report.html || true
                         """
 
-                        if (fileExists('zap-report.html')) {
-                            sh "mkdir -p zap-out && cp zap-report.html zap-out/index.html && chmod -R 755 zap-out"
-                        } 
-                        else {
-                            echo "ZAP Failed. Running debug..."
-                            sh "nslookup \$(echo ${env.APP_URL} | sed 's|http://||' | cut -d: -f1)"
-                        }
+                        sh "mkdir -p zap-out && cp zap-report.html zap-out/index.html && chmod -R 755 zap-out"
                     }
                 }
             }
             post {
                 always {
                     script {
-                        if (fileExists('zap-out/index.html')) {
-                            archiveArtifacts artifacts: 'zap-report.html', fingerprint: true
-                            publishHTML([
-                                allowMissing: false,
-                                alwaysLinkToLastBuild: true,
-                                keepAll: true,
-                                reportDir: 'zap-out',
-                                reportFiles: 'index.html',
-                                reportName: 'OWASP-ZAP-DAST'
-                            ])
-                        }
+                        archiveArtifacts artifacts: 'zap-report.html', fingerprint: true
+                        publishHTML([
+                            allowMissing: false,
+                            alwaysLinkToLastBuild: true,
+                            keepAll: true,
+                            reportDir: 'zap-out',
+                            reportFiles: 'index.html',
+                            reportName: 'OWASP-ZAP-DAST'
+                        ])
                     }
                 }
             }
