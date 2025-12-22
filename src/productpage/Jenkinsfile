@@ -170,8 +170,7 @@ spec:
         stage('Image Scan (Trivy)') {
             steps {
                 container('trivy') {
-                    def imageToScan = "${env.FULL_IMAGE}:${env.GIT_TAG}"
-                    sh "trivy image --severity HIGH,CRITICAL --exit-code 0 $imageToScan"
+                    sh "trivy image --severity HIGH,CRITICAL --exit-code 0 ${env.FULL_IMAGE}:${env.GIT_TAG}"
                 }
             }
         }
