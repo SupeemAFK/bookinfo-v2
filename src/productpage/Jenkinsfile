@@ -20,6 +20,10 @@ spec:
     image: alpine/helm:3.12.0
     command: ['cat']
     tty: true
+ - name: sonar-scanner
+    image: sonarsource/sonar-scanner-cli:latest
+    command: ['cat']
+    tty: true
   volumes:
   - name: docker-sock
     hostPath:
@@ -29,11 +33,17 @@ spec:
     }
 
     environment {
+        //Harbor Image
         REGISTRY_URL = "registry-supeem.opsta.in.th"
         IMAGE_PATH   = "library/productpage-service"
         FULL_IMAGE   = "${REGISTRY_URL}/${IMAGE_PATH}"
         CHART_DIR    = "helm-chart/productpage"
 
+        //Sonar
+        SONAR_SERVER_URL = "https://sast-supeem.opsta.in.th"
+        SONAR_PROJECT_KEY = "SupeemAFK_bookinfo_8304fcdc-fe26-4b19-a892-84f8f847e9df"
+
+        //Branch
         SAFE_BRANCH = "${env.BRANCH_NAME != null ? env.BRANCH_NAME : 'dev'}"
 
         RELEASE_NAME = "${env.SAFE_BRANCH == 'main' ? 'bookinfo-productpage-uat' : 'bookinfo-productpage-dev'}"
@@ -66,6 +76,24 @@ spec:
                         ])
                     }
                     env.GIT_TAG = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+                }
+            }
+        }
+
+        stage('Static Analysis (SonarQube)') {
+            steps {
+                container('sonar-scanner') {
+                    withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
+                        script {
+                            sh """
+                                sonar-scanner \
+                                  -Dsonar.projectKey=${env.SONAR_PROJECT_KEY} \
+                                  -Dsonar.sources=src/productpage \
+                                  -Dsonar.host.url=${env.SONAR_SERVER_URL} \
+                                  -Dsonar.login=${SONAR_TOKEN}
+                            """
+                        }
+                    }
                 }
             }
         }
