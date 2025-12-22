@@ -191,13 +191,14 @@ spec:
             steps {
                 container('zap') {
                     script {
+                        sh "chmod 777 ." 
                         sh "zap-baseline.py -t ${env.APP_URL} -r zap_report.html || true"
                     }
                 }
             }
             post {
                 always {
-                    archiveArtifacts artifacts: 'zap_report.html', fingerprint: true
+                    archiveArtifacts artifacts: 'zap_report.html', fingerprint: true, allowEmptyArchive: true
                 }
             }
         }
