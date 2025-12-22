@@ -178,13 +178,13 @@ spec:
         stage('Deploy to K8s (Helm)') {
             steps {
                 container('helm') {
-                    sh '''                       
+                    sh """                       
                         helm upgrade --install ${env.RELEASE_NAME} ${env.CHART_DIR} \
                             --namespace ${env.NAMESPACE} \
                             -f ${env.VALUES_FILE} \
                             --set productpage.image.tag=${env.GIT_TAG} \
                             --wait
-                    '''
+                    """
                 }
             }
         }
@@ -193,8 +193,8 @@ spec:
             steps {
                 container('zap') {
                     script {
-                        sh 'chmod 777 .' 
-                        sh 'zap-baseline.py -t ${env.APP_URL} -r zap_report.html || true'
+                        sh "chmod 777 ."
+                        sh "zap-baseline.py -t ${env.APP_URL} -r zap_report.html || true"
                     }
                 }
             }
