@@ -166,7 +166,7 @@ spec:
                     sh '''
                         pip install pytest
                         pip install -r src/productpage/test-requirements.txt
-                        pytest src/productpage/test/units/test_productpage.py --junitxml=results.xml
+                        pytest src/productpage/tests/units/test_productpage.py --junitxml=results.xml
                     '''
                 }
             }
