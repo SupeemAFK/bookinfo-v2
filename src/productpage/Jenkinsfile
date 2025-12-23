@@ -163,14 +163,12 @@ spec:
         stage ('Run Productpage Unit Tests') {
             steps {
                 container('python') {
-                    sh '''
-                        pip install pytest
-                        pip install -r src/productpage/test-requirements.txt
-
-                        export PYTHONPATH=$PYTHONPATH:$(pwd)/src
-
-                        pytest src/productpage/tests/unit/test_productpage.py --junitxml=results.xml
-                    '''
+                    dir('src/productpage') {
+                        sh '''
+                            pip install -r test-requirements.txt
+                            python3 -m unittest discover tests/unit
+                        '''
+                    }
                 }
             }
         }
