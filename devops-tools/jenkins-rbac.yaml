@@ -1,12 +1,12 @@
 apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
+kind: ClusterRoleBinding
 metadata:
-  name: jenkins-deploy-binding
+  name: jenkins-cross-ns-deployer
 subjects:
 - kind: ServiceAccount
-  name: default        
-  namespace: devops-tools 
+  name: jenkins-deployer
+  namespace: devops-tools
 roleRef:
   kind: ClusterRole
-  name: edit           
+  name: edit
   apiGroup: rbac.authorization.k8s.io

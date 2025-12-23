@@ -8,7 +8,12 @@ metadata:
   labels:
     app: jenkins-agent-bookinfo
 spec:
+  serviceAccountName: jenkins-deployer
   containers:
+  - name: python
+    image: python:3.9-slim
+    command: ['cat']
+    tty: true
   - name: docker
     image: docker:24.0.5
     command: ['cat']
@@ -150,6 +155,18 @@ spec:
             post {
                 always {
                     dependencyCheckPublisher pattern: '**/dependency-check-report.xml'                    
+                }
+            }
+        }
+
+        stage ('Run Productpage Unit Tests') {
+            steps {
+                container('python') {
+                    sh '''
+                        pip install pytest
+                        pip install productpage/test-requirements.txt
+                        pytest productpage/test/units/test_productpage.py --junitxml=results.xml
+                    '''
                 }
             }
         }
