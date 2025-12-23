@@ -72,7 +72,7 @@ spec:
         CHART_DIR    = "helm-chart/productpage"
 
         SONAR_SERVER_URL = "https://sast-supeem.opsta.in.th"
-        SONAR_PROJECT_KEY = "SupeemAFK_bookinfo_8304fcdc-fe26-4b19-a892-84f8f847e9df"
+        SONAR_PROJECT_KEY = "bookinfo-productpage"
 
         SAFE_BRANCH  = "${env.BRANCH_NAME != null ? env.BRANCH_NAME : 'dev'}"
         RELEASE_NAME = "${env.SAFE_BRANCH == 'main' ? 'bookinfo-productpage-uat' : 'bookinfo-productpage-dev'}"
