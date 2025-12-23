@@ -45,9 +45,8 @@ class ApplianceTest(unittest.TestCase):
             'x-b3-sampled': '1',
             'sw8': '40c7fdf104e3de67'
         }
-        m.get(re.compile(r".*reviews.*:9080/reviews/.*"), 
-            text='{}', 
-            request_headers=expected_headers)
+        reviews_pattern = re.compile(r'^http://(bookinfo-)?reviews(-dev|-uat)?:9080/reviews/\d+$')
+        m.get(reviews_pattern, text='{}', request_headers=expected_headers)
 
         uri = "/api/v1/products/%d/reviews" % product_id
         headers = {
@@ -74,9 +73,8 @@ class ApplianceTest(unittest.TestCase):
             'x-b3-sampled': '1',
             'sw8': '40c7fdf104e3de67'
         }
-        m.get(re.compile(r".*ratings.*:9080/ratings/.*"), 
-            text='{}', 
-            request_headers=expected_headers)
+        ratings_pattern = re.compile(r'^http://(bookinfo-)?ratings(-dev|-uat)?:9080/ratings/\d+$')
+        m.get(ratings_pattern, text='{}', request_headers=expected_headers)
 
         uri = "/api/v1/products/%d/ratings" % product_id
         headers = {
