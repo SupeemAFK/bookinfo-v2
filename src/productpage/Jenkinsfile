@@ -165,6 +165,7 @@ spec:
                 container('python') {
                     dir('src/productpage') {
                         sh '''
+                            pip install -r requirements.txt
                             pip install -r test-requirements.txt
                             python3 -m unittest discover tests/unit
                         '''
