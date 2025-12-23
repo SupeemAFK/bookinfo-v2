@@ -145,6 +145,7 @@ spec:
                         /usr/share/dependency-check/bin/dependency-check.sh \
                         --project "Bookinfo-productpage" \
                         --scan ./src/productpage/requirements.txt \
+                        --scan ./src/productpage/test-requirements.txt \
                         --format HTML \
                         --format XML \
                         --out . \
@@ -164,8 +165,8 @@ spec:
                 container('python') {
                     sh '''
                         pip install pytest
-                        pip install productpage/test-requirements.txt
-                        pytest productpage/test/units/test_productpage.py --junitxml=results.xml
+                        pip install -r src/productpage/test-requirements.txt
+                        pytest src/productpage/test/units/test_productpage.py --junitxml=results.xml
                     '''
                 }
             }
