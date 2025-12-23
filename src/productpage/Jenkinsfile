@@ -166,6 +166,9 @@ spec:
                     sh '''
                         pip install pytest
                         pip install -r src/productpage/test-requirements.txt
+
+                        export PYTHONPATH=$PYTHONPATH:$(pwd)/src
+
                         pytest src/productpage/tests/unit/test_productpage.py --junitxml=results.xml
                     '''
                 }
