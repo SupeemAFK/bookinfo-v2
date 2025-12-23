@@ -24,6 +24,7 @@ import requests_mock
 
 import productpage
 
+import re
 
 class ApplianceTest(unittest.TestCase):
 
@@ -44,8 +45,9 @@ class ApplianceTest(unittest.TestCase):
             'x-b3-sampled': '1',
             'sw8': '40c7fdf104e3de67'
         }
-        m.get("http://reviews:9080/reviews/%d" % product_id, text='{}',
-              request_headers=expected_headers)
+        m.get(re.compile(r".*reviews.*:9080/reviews/.*"), 
+            text='{}', 
+            request_headers=expected_headers)
 
         uri = "/api/v1/products/%d/reviews" % product_id
         headers = {
@@ -72,6 +74,9 @@ class ApplianceTest(unittest.TestCase):
             'x-b3-sampled': '1',
             'sw8': '40c7fdf104e3de67'
         }
+        m.get(re.compile(r".*ratings.*:9080/rev/.*"), 
+            text='{}', 
+            request_headers=expected_headers)
         m.get("http://ratings:9080/ratings/%d" % product_id, text='{}',
               request_headers=expected_headers)
 
