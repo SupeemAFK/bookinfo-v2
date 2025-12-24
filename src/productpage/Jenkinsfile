@@ -23,6 +23,7 @@ spec:
       value: tcp://localhost:2375
   - name: dind
     image: docker:24.0.5-dind
+    command: ["dockerd", "--host=unix:///var/run/docker.sock", "--host=tcp://0.0.0.0:2375", "--storage-driver=overlay2"]
     securityContext:
       privileged: true
     env:
@@ -49,6 +50,9 @@ spec:
   - name: trivy
     image: aquasec/trivy:latest
     command: ['cat']
+    env:
+    - name: DOCKER_HOST
+      value: tcp://localhost:2375
     tty: true
   - name: zap
     image: ghcr.io/zaproxy/zaproxy:stable
