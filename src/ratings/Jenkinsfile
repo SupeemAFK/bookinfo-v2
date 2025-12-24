@@ -18,11 +18,16 @@ spec:
     image: docker:24.0.5
     command: ['cat']
     tty: true
+    env:
+    - name: DOCKER_HOST
+      value: tcp://localhost:2375
+  - name: dind
+    image: docker:24.0.5-dind
     securityContext:
       privileged: true
-    volumeMounts:
-    - name: docker-sock
-      mountPath: /var/run/docker.sock
+    env:
+    - name: DOCKER_TLS_CERTDIR
+      value: ""
   - name: helm
     image: alpine/helm:3.12.0
     command: ['cat']
@@ -54,9 +59,6 @@ spec:
     command: ['cat']
     tty: true
   volumes:
-  - name: docker-sock
-    hostPath:
-      path: /var/run/docker.sock
   - name: sca-data
     hostPath:
       path: /tmp/dependency-check-data
@@ -183,18 +185,12 @@ spec:
                         def registryUrl = "https://${REGISTRY_URL}".toString()
                         def credentialsId = 'registry-bookinfo'
 
-                        def dockerConfigDir = "${WORKSPACE}/.docker-${env.JOB_NAME.split('/').last()}-${env.BUILD_NUMBER}"
-                        sh "mkdir -p ${dockerConfigDir}"
-
-                        withEnv(["DOCKER_CONFIG=${dockerConfigDir}"]) {
-                            docker.withRegistry(registryUrl, credentialsId) {
-                                def myImage = docker.build("${env.FULL_IMAGE}:${env.GIT_TAG}", "./src/ratings")
-                                retry(3) {
-                                    myImage.push()
-                                }
+                        docker.withRegistry(registryUrl, credentialsId) {
+                            def myImage = docker.build("${env.FULL_IMAGE}:${env.GIT_TAG}", "./src/ratings")
+                            retry(3) {
+                                myImage.push()
                             }
                         }
-                        sh "rm -rf ${dockerConfigDir}"
                     }
                 }
             }
