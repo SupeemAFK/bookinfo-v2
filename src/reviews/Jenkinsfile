@@ -123,8 +123,8 @@ spec:
                         sh '''
                             sonar-scanner \
                             -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                            -Dsonar.sources=src/reviews \
-                            -Dsonar.java.binaries=**/target/classes \
+                            -Dsonar.sources=src/reviews/src/main/java \
+                            -Dsonar.java.binaries=src/reviews/bin/main \
                             -Dsonar.host.url=${SONAR_SERVER_URL} \
                             -Dsonar.login=${SONAR_TOKEN} \
                             -Dsonar.qualitygate.wait=true \
