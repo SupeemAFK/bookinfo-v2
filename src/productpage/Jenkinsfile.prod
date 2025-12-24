@@ -29,22 +29,6 @@ spec:
     }
 
     stages {
-        stage('Checkout') {
-            steps {
-                script {
-                    withEnv(['GIT_SSH_COMMAND=ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no']) {
-                        checkout([$class: 'GitSCM',
-                            branches: [[name: "*/main"]], 
-                            userRemoteConfigs: [[
-                                credentialsId: 'bookinfo-deploy-key',
-                                url: 'git@gitlab.com:SupeemAFK/bookinfo.git'
-                            ]]
-                        ])
-                    }
-                }
-            }
-        }
-
         stage('Deploy to Production') {
             steps {
                 container('helm') {

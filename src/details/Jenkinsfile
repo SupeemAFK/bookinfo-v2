@@ -8,11 +8,14 @@ metadata:
   labels:
     app: jenkins-agent-bookinfo
 spec:
+  serviceAccountName: jenkins-deployer
   containers:
   - name: docker
     image: docker:24.0.5
     command: ['cat']
     tty: true
+    securityContext:
+      privileged: true
     volumeMounts:
     - name: docker-sock
       mountPath: /var/run/docker.sock
@@ -20,10 +23,39 @@ spec:
     image: alpine/helm:3.12.0
     command: ['cat']
     tty: true
+  - name: sonar-scanner
+    image: sonarsource/sonar-scanner-cli:latest
+    command: ['cat']
+    tty: true
+  - name: dependency-check
+    image: owasp/dependency-check:latest
+    command: ['cat']
+    tty: true
+    securityContext:
+      runAsUser: 0
+    volumeMounts:
+    - name: sca-data
+      mountPath: /usr/share/dependency-check/data
+      subPath: "bookinfo-scan"
+  - name: trivy
+    image: aquasec/trivy:latest
+    command: ['cat']
+    tty: true
+  - name: zap
+    image: ghcr.io/zaproxy/zaproxy:stable
+    command: ['sh', '-c', 'cat']
+    tty: true
+  - name: kics
+    image: checkmarx/kics:latest
+    command: ['cat']
+    tty: true
   volumes:
   - name: docker-sock
     hostPath:
       path: /var/run/docker.sock
+  - name: sca-data
+    hostPath:
+      path: /tmp/dependency-check-data
 """
         }
     }
@@ -32,66 +64,108 @@ spec:
         REGISTRY_URL = "registry-supeem.opsta.in.th"
         IMAGE_PATH   = "library/details-service"
         FULL_IMAGE   = "${REGISTRY_URL}/${IMAGE_PATH}"
+
         CHART_DIR    = "helm-chart/details"
 
-        SAFE_BRANCH = "${env.BRANCH_NAME != null ? env.BRANCH_NAME : 'dev'}"
+        SONAR_SERVER_URL = "https://sast-supeem.opsta.in.th"
+        SONAR_PROJECT_KEY = "bookinfo-details"
 
+        SAFE_BRANCH  = "${env.BRANCH_NAME != null ? env.BRANCH_NAME : 'dev'}"
         RELEASE_NAME = "${env.SAFE_BRANCH == 'main' ? 'bookinfo-details-uat' : 'bookinfo-details-dev'}"
         NAMESPACE    = "${env.SAFE_BRANCH == 'main' ? 'bookinfo-uat' : 'bookinfo-dev'}"
         VALUES_FILE  = "${env.SAFE_BRANCH == 'main' ? 'helm-chart/details/uat-details-values.yaml' : 'helm-chart/details/dev-details-values.yaml'}"
+
+        APP_URL      = "http://details.bookinfo-${SAFE_BRANCH}.svc.cluster.local:9080"
     }
 
     stages {
-        stage('Debug Info') {
-            steps {
-                script {
-                    echo "Branch Detected: ${env.SAFE_BRANCH}"
-                    echo "Target Namespace: ${env.NAMESPACE}"
-                    echo "Target Release:   ${env.RELEASE_NAME}"
-                    echo "Values File:      ${env.VALUES_FILE}"
-                }
-            }
-        }
-
         stage('Checkout & Setup') {
             steps {
                 script {
-                    withEnv(['GIT_SSH_COMMAND=ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no']) {
-                        checkout([$class: 'GitSCM',
-                            branches: [[name: "*/${env.SAFE_BRANCH}"]], 
-                            userRemoteConfigs: [[
-                                credentialsId: 'bookinfo-deploy-key',
-                                url: 'git@gitlab.com:SupeemAFK/bookinfo.git'
-                            ]]
-                        ])
-                    }
+                    checkout([$class: 'GitSCM',
+                        branches: [[name: "*/${env.SAFE_BRANCH}"]], 
+                        userRemoteConfigs: [[
+                            credentialsId: 'bookinfo-deploy-key',
+                            url: 'git@gitlab.com:SupeemAFK/bookinfo.git'
+                        ]]
+                    ])
                     env.GIT_TAG = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
                 }
             }
         }
 
-        stage('Build & Push to Harbor') {
-            when {
-                anyOf {
-                    expression { env.SAFE_BRANCH == 'dev' }
-                    expression { env.SAFE_BRANCH == 'main' }
+        
+        stage('IaC Scan (KICS)') {
+            steps {
+                container('kics') {
+                    sh "/app/bin/kics scan -p ${env.CHART_DIR} --fail-on high,critical --report-formats html,json -o ."
                 }
             }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'results.html,results.json', fingerprint: true
+                    publishHTML([
+                        allowMissing: false,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: '.',
+                        reportFiles: 'results.html',
+                        reportName: 'KICS IaC Report'
+                    ])
+                }
+            }
+        }
+
+        stage('Static Analysis (SonarQube)') {
+            steps {
+                container('sonar-scanner') {
+                    withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
+                        sh '''
+                            sonar-scanner \
+                            -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                            -Dsonar.sources=src/details \
+                            -Dsonar.host.url=${SONAR_SERVER_URL} \
+                            -Dsonar.login=${SONAR_TOKEN} \
+                            -Dsonar.qualitygate.wait=true \
+                            -Dsonar.qualitygate.timeout=300
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('SCA (Dependency-Check)') {
+            steps {
+                container('dependency-check') {
+                    sh '''                        
+                        /usr/share/dependency-check/bin/dependency-check.sh \
+                        --project "Bookinfo-details" \
+                        --scan ./src/details/Gemfile \
+                        --format HTML \
+                        --format XML \
+                        --out . \
+                        --enableExperimental
+                    '''
+                }
+            }
+            post {
+                always {
+                    dependencyCheckPublisher pattern: '**/dependency-check-report.xml'                    
+                }
+            }
+        }
+
+        stage('Build & Push to Harbor') {
             steps {
                 container('docker') {
-                    withCredentials([usernamePassword(credentialsId: 'registry-bookinfo', usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
-                        sh "mkdir -p ${WORKSPACE}/.docker"
-                        withEnv(["DOCKER_CONFIG=${WORKSPACE}/.docker"]) {
-                            script {
-                                retry(3) {
-                                    sh 'printenv REG_PASS | docker login $REGISTRY_URL -u $REG_USER --password-stdin'
-                                }
-                            }
-                            dir('src/details') {
-                                sh "docker build -t ${env.FULL_IMAGE}:${env.GIT_TAG} ."
-                                retry(3) {
-                                    sh "docker push ${env.FULL_IMAGE}:${env.GIT_TAG}"
-                                }
+                    script {
+                        def registryUrl = "https://${REGISTRY_URL}".toString()
+                        def credentialsId = 'registry-bookinfo'
+
+                        docker.withRegistry(registryUrl, credentialsId) {
+                            def myImage = docker.build("${env.FULL_IMAGE}:${env.GIT_TAG}", "./src/details")
+                            retry(3) {
+                                myImage.push()
                             }
                         }
                     }
@@ -99,23 +173,85 @@ spec:
             }
         }
 
-        stage('Deploy to K8s (Helm)') {
-            when {
-                anyOf {
-                    expression { env.SAFE_BRANCH == 'dev' }
-                    expression { env.SAFE_BRANCH == 'main' }
+        stage('Image Scan (Trivy)') {
+            steps {
+                container('trivy') {
+                    sh "trivy image --severity HIGH,CRITICAL --format template --template '@/contrib/html.tpl' -o trivy-results.html ${env.FULL_IMAGE}:${env.GIT_TAG}"
+                    sh """
+                        mkdir -p trivy-html-report
+                        cp trivy-results.html trivy-html-report/index.html
+                        chmod -R 755 trivy-html-report
+                    """
                 }
             }
+            post {
+                always {
+                    script {
+                        archiveArtifacts artifacts: 'trivy-results.html', fingerprint: true
+                        publishHTML([
+                            allowMissing: false,
+                            alwaysLinkToLastBuild: true,
+                            keepAll: true,
+                            reportDir: 'trivy-html-report',
+                            reportFiles: 'index.html',
+                            reportName: 'Trivy-Image-Scan'
+                        ])
+                    }
+                }
+            }
+        }
+
+        stage('Deploy to K8s (Helm)') {
             steps {
                 container('helm') {
+                    sh """                       
+                        helm upgrade --install ${env.RELEASE_NAME} ${env.CHART_DIR} \
+                            --namespace ${env.NAMESPACE} \
+                            -f ${env.VALUES_FILE} \
+                            --set details.image.tag=${env.GIT_TAG} \
+                            --wait
+                    """
+                }
+            }
+        }
+
+        stage('DAST (OWASP ZAP)') {
+            steps {
+                container('zap') {
                     script {
-                        sh """                        
-                            helm upgrade --install ${env.RELEASE_NAME} ${env.CHART_DIR} \
-                                --namespace ${env.NAMESPACE} \
-                                -f ${env.VALUES_FILE} \
-                                --set details.image.tag=${env.GIT_TAG} \
-                                --wait
+                        sh "chmod 777 ."
+                        sh "ln -s \$(pwd) /zap/wrk"
+
+                        sh """
+                            zap-baseline.py -t ${env.APP_URL} \
+                            -r zap-report.html \
+                            --autooff \
+                            -z "-config connection.timeoutInSecs=60" || true
                         """
+
+                        if (fileExists('zap-report.html')) {
+                            sh "mkdir -p zap-out && cp zap-report.html zap-out/index.html && chmod -R 755 zap-out"
+                        } else {
+                            echo "ZAP Failed. Running debug..."
+                            sh "nslookup \$(echo ${env.APP_URL} | sed 's|http://||' | cut -d: -f1)"
+                        }
+                    }
+                }
+            }
+            post {
+                always {
+                    script {
+                        if (fileExists('zap-out/index.html')) {
+                            archiveArtifacts artifacts: 'zap-report.html', fingerprint: true
+                            publishHTML([
+                                allowMissing: false,
+                                alwaysLinkToLastBuild: true,
+                                keepAll: true,
+                                reportDir: 'zap-out',
+                                reportFiles: 'index.html',
+                                reportName: 'OWASP-ZAP-DAST'
+                            ])
+                        }
                     }
                 }
             }

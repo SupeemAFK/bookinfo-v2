@@ -7,7 +7,7 @@
 ### 1. Create harbor secret
 ```
 kubectl create secret docker-registry harbor-creds-dev \
-  --namespace=bookinfo-dev
+  --namespace=bookinfo-dev \
   --docker-username="YOUR_USERNAME" \
   --docker-password="YOUR_PASSWORD"
 ```
