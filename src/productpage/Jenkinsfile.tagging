@@ -68,9 +68,9 @@ spec:
                             def sourceImg = docker.image("${env.FULL_IMAGE}:${env.SHORT_HASH}")
                             sourceImg.pull()
 
-                            sourceImg.push("productpage/${params.RELEASE_VERSION}")
+                            sourceImg.push("${params.RELEASE_VERSION}")
                             
-                            echo "Successfully pushed native tag: productpage/${params.RELEASE_VERSION}"
+                            echo "Successfully pushed native tag: ${params.RELEASE_VERSION}"
                         }
                     }
                 }
