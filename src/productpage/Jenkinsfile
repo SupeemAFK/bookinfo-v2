@@ -82,9 +82,9 @@ spec:
         APP_URL      = "http://productpage.bookinfo-${SAFE_BRANCH}.svc.cluster.local:9080"
 
         //For Productpage test
-        DETAILS_HOSTNAME = "http://bookinfo-details-${SAFE_BRANCH}:9080"
-        RATINGS_HOSTNAME = "http://bookinfo-ratings-${SAFE_BRANCH}:9080"
-        REVIEWS_HOSTNAME = "http://bookinfo-reviews-${SAFE_BRANCH}:9080" 
+        DETAILS_HOSTNAME = "http://bookinfo-details-${SAFE_BRANCH == 'main' ? 'uat' : 'dev'}:9080"
+        RATINGS_HOSTNAME = "http://bookinfo-ratings-${SAFE_BRANCH == 'main' ? 'uat' : 'dev'}:9080"
+        REVIEWS_HOSTNAME = "http://bookinfo-reviews-${SAFE_BRANCH == 'main' ? 'uat' : 'dev'}:9080" 
     }
 
     stages {
