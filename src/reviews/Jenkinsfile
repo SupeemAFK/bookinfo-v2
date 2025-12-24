@@ -181,6 +181,11 @@ spec:
                             retry(3) {
                                 myImage.push()
                             }
+                            catch (Exception e) {
+                                echo "Push failed, likely 500 error. Waiting 15s before retry..."
+                                sleep 15
+                                throw e 
+                            }
                         }
                     }
                 }
