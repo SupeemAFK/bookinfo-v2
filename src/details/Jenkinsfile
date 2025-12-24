@@ -14,11 +14,17 @@ spec:
     image: docker:24.0.5
     command: ['cat']
     tty: true
+    env:
+    - name: DOCKER_HOST
+      value: tcp://localhost:2375
+  - name: dind
+    image: docker:24.0.5-dind
+    command: ["dockerd", "--host=unix:///var/run/docker.sock", "--host=tcp://0.0.0.0:2375", "--storage-driver=overlay2"]
     securityContext:
       privileged: true
-    volumeMounts:
-    - name: docker-sock
-      mountPath: /var/run/docker.sock
+    env:
+    - name: DOCKER_TLS_CERTDIR
+      value: ""
   - name: helm
     image: alpine/helm:3.12.0
     command: ['cat']
@@ -40,6 +46,9 @@ spec:
   - name: trivy
     image: aquasec/trivy:latest
     command: ['cat']
+    env:
+    - name: DOCKER_HOST
+      value: tcp://localhost:2375
     tty: true
   - name: zap
     image: ghcr.io/zaproxy/zaproxy:stable
@@ -50,9 +59,6 @@ spec:
     command: ['cat']
     tty: true
   volumes:
-  - name: docker-sock
-    hostPath:
-      path: /var/run/docker.sock
   - name: sca-data
     hostPath:
       path: /tmp/dependency-check-data
@@ -165,6 +171,9 @@ spec:
                     script {
                         def registryUrl = "https://${REGISTRY_URL}".toString()
                         def credentialsId = 'registry-bookinfo'
+
+                        // Wait for the private daemon to finish booting
+                        sh 'while ! docker info > /dev/null 2>&1; do sleep 1; done'
 
                         docker.withRegistry(registryUrl, credentialsId) {
                             def myImage = docker.build("${env.FULL_IMAGE}:${env.GIT_TAG}", "./src/details")

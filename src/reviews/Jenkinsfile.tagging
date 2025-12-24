@@ -1,0 +1,98 @@
+pipeline {
+    agent {
+        kubernetes {
+            yaml """
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: jenkins-agent-tagging
+spec:
+  containers:
+  - name: docker
+    image: docker:24.0.5
+    command: ['cat']
+    tty: true
+    volumeMounts:
+    - name: docker-sock
+      mountPath: /var/run/docker.sock
+  volumes:
+  - name: docker-sock
+    hostPath:
+      path: /var/run/docker.sock
+"""
+        }
+    }
+
+    parameters {
+        string(name: 'RELEASE_VERSION', description: 'The new version to release (e.g. v1.0.0)', trim: true)
+    }
+
+    environment {
+        REGISTRY_URL = "registry-supeem.opsta.in.th"
+        IMAGE_PATH   = "library/reviews-service"
+        FULL_IMAGE   = "${REGISTRY_URL}/${IMAGE_PATH}"
+        
+        GIT_REPO     = "git@gitlab.com:SupeemAFK/bookinfo.git"
+        GIT_CREDS    = "bookinfo-deploy-key"
+    }
+
+    stages {
+        stage('Checkout Main') {
+            steps {
+                script {
+                    withEnv(['GIT_SSH_COMMAND=ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no']) {
+                        checkout([$class: 'GitSCM',
+                            branches: [[name: "*/main"]], 
+                            userRemoteConfigs: [[
+                                credentialsId: env.GIT_CREDS,
+                                url: env.GIT_REPO
+                            ]]
+                        ])
+                    }
+                    
+                    env.SHORT_HASH = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+                    echo "Promoting Artifact from Commit: ${env.SHORT_HASH}"
+                }
+            }
+        }
+
+        stage('Promote Docker Image') {
+            steps {
+                container('docker') {
+                    script {
+                        def registryUrl = "https://${REGISTRY_URL}".toString()
+                        def credentialsId = 'registry-bookinfo'
+
+                        docker.withRegistry(registryUrl, credentialsId) {
+                            def sourceImg = docker.image("${env.FULL_IMAGE}:${env.SHORT_HASH}")
+                            sourceImg.pull()
+
+                            sourceImg.push("${params.RELEASE_VERSION}")
+                            
+                            echo "Successfully pushed native tag: ${params.RELEASE_VERSION}"
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Create Git Tag') {
+            steps {
+                script {
+                    sh 'git config user.email "jenkins@opsta.in.th"'
+                    sh 'git config user.name "Jenkins Bot"'
+
+                    sh "git tag -a reviews/${params.RELEASE_VERSION} -m 'Release reviews/${params.RELEASE_VERSION}'"
+                    
+                    withCredentials([sshUserPrivateKey(credentialsId: env.GIT_CREDS, keyFileVariable: 'SSH_KEY_FILE')]) {
+                        sh """
+                            export GIT_SSH_COMMAND="ssh -i \${SSH_KEY_FILE} -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+                            git push origin reviews/${params.RELEASE_VERSION}
+                        """
+                    }
+                }
+            }
+        }
+    }
+}

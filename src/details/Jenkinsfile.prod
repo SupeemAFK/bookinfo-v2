@@ -1,0 +1,59 @@
+pipeline {
+    agent {
+        kubernetes {
+            yaml """
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: jenkins-agent-prod-deploy
+spec:
+  serviceAccountName: jenkins-deployer
+  containers:
+  - name: helm
+    image: alpine/helm:3.12.0
+    command: ['cat']
+    tty: true
+"""
+        }
+    }
+
+    parameters {
+        string(name: 'DEPLOY_VERSION', description: 'Which version to deploy? (e.g. v1.0.0)', trim: true)
+    }
+
+    environment {
+        RELEASE_NAME = "bookinfo-details"
+        NAMESPACE    = "bookinfo-prod"
+        CHART_DIR    = "helm-chart/details"
+        VALUES_FILE  = "helm-chart/details/prod-details-values.yaml"
+    }
+
+    stages {
+        stage('Deploy to Production') {
+            steps {
+                container('helm') {
+                    script {
+                        echo " DEPLOYING TO PRODUCTION"
+                        echo " Release: ${env.RELEASE_NAME}"
+                        echo " Version: ${params.DEPLOY_VERSION}"
+
+                        sh """
+                            helm upgrade --install ${env.RELEASE_NAME} ${env.CHART_DIR} \
+                                --namespace ${env.NAMESPACE} \
+                                -f ${env.VALUES_FILE} \
+                                --set details.image.tag=${params.DEPLOY_VERSION} \
+                                --wait
+                        """
+                    }
+                }
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo "Production Deployment Complete: v${params.DEPLOY_VERSION}"
+        }
+    }
+}
