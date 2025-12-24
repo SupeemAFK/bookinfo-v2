@@ -8,6 +8,7 @@ metadata:
   labels:
     app: jenkins-agent-bookinfo
 spec:
+  serviceAccountName: jenkins-deployer
   containers:
   - name: docker
     image: docker:24.0.5
