@@ -144,8 +144,7 @@ spec:
                     sh '''                        
                         /usr/share/dependency-check/bin/dependency-check.sh \
                         --project "Bookinfo-ratings" \
-                        --scan ./src/ratings/requirements.txt \
-                        --scan ./src/ratings/test-requirements.txt \
+                        --scan ./src/ratings/package.json \
                         --format HTML \
                         --format XML \
                         --out . \
