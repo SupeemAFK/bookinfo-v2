@@ -167,12 +167,18 @@ spec:
                         def registryUrl = "https://${REGISTRY_URL}".toString()
                         def credentialsId = 'registry-bookinfo'
 
-                        docker.withRegistry(registryUrl, credentialsId) {
-                            def myImage = docker.build("${env.FULL_IMAGE}:${env.GIT_TAG}", "./src/reviews")
-                            retry(3) {
-                                myImage.push()
+                        def dockerConfigDir = "${WORKSPACE}/.docker-${env.JOB_NAME.split('/').last()}-${env.BUILD_NUMBER}"
+                        sh "mkdir -p ${dockerConfigDir}"
+
+                        withEnv(["DOCKER_CONFIG=${dockerConfigDir}"]) {
+                            docker.withRegistry(registryUrl, credentialsId) {
+                                def myImage = docker.build("${env.FULL_IMAGE}:${env.GIT_TAG}", "./src/reviews")
+                                retry(3) {
+                                    myImage.push()
+                                }
                             }
                         }
+                        sh "rm -rf ${dockerConfigDir}"
                     }
                 }
             }
