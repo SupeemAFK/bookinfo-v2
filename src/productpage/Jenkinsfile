@@ -112,15 +112,19 @@ spec:
             }
             post {
                 always {
-                    archiveArtifacts artifacts: 'results.html,results.json', fingerprint: true
-                    publishHTML([
-                        allowMissing: false,
-                        alwaysLinkToLastBuild: true,
-                        keepAll: true,
-                        reportDir: '.',
-                        reportFiles: 'results.html',
-                        reportName: 'KICS IaC Report'
-                    ])
+                    script {
+                        if (fileExists('results.html')) { 
+                            archiveArtifacts artifacts: 'results.html,results.json', fingerprint: true
+                            publishHTML([
+                                allowMissing: false,
+                                alwaysLinkToLastBuild: true,
+                                keepAll: true,
+                                reportDir: '.',
+                                reportFiles: 'results.html',
+                                reportName: 'KICS IaC Report'
+                            ])
+                        }
+                    }
                 }
             }
         }
@@ -211,15 +215,17 @@ spec:
             post {
                 always {
                     script {
-                        archiveArtifacts artifacts: 'trivy-results.html', fingerprint: true
-                        publishHTML([
-                            allowMissing: false,
-                            alwaysLinkToLastBuild: true,
-                            keepAll: true,
-                            reportDir: 'trivy-html-report',
-                            reportFiles: 'index.html',
-                            reportName: 'Trivy-Image-Scan'
-                        ])
+                        if (fileExists('trivy-html-report/index.html')) {
+                            archiveArtifacts artifacts: 'trivy-results.html', fingerprint: true
+                            publishHTML([
+                                allowMissing: false,
+                                alwaysLinkToLastBuild: true,
+                                keepAll: true,
+                                reportDir: 'trivy-html-report',
+                                reportFiles: 'index.html',
+                                reportName: 'Trivy-Image-Scan'
+                            ])
+                        }
                     }
                 }
             }
