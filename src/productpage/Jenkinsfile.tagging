@@ -68,9 +68,9 @@ spec:
                             def sourceImg = docker.image("${env.FULL_IMAGE}:${env.SHORT_HASH}")
                             sourceImg.pull()
 
-                            sourceImg.push("productpage-${params.RELEASE_VERSION}")
+                            sourceImg.push("productpage/${params.RELEASE_VERSION}")
                             
-                            echo "Successfully pushed native tag: productpage-${params.RELEASE_VERSION}"
+                            echo "Successfully pushed native tag: productpage/${params.RELEASE_VERSION}"
                         }
                     }
                 }
@@ -83,7 +83,7 @@ spec:
                     sh 'git config user.email "jenkins@opsta.in.th"'
                     sh 'git config user.name "Jenkins Bot"'
 
-                    sh "git tag -a productpage-${params.RELEASE_VERSION} -m 'Release productpage-${params.RELEASE_VERSION}'"
+                    sh "git tag -a productpage/${params.RELEASE_VERSION} -m 'Release productpage/${params.RELEASE_VERSION}'"
                     
                     withCredentials([sshUserPrivateKey(credentialsId: env.GIT_CREDS, keyFileVariable: 'SSH_KEY_FILE')]) {
                         sh """
