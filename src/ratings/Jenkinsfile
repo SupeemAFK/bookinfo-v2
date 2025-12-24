@@ -180,7 +180,7 @@ spec:
                         def credentialsId = 'registry-bookinfo'
 
                         docker.withRegistry(registryUrl, credentialsId) {
-                            def myImage = docker.build("${env.FULL_IMAGE}:${env.GIT_TAG}", "./src/productpage")
+                            def myImage = docker.build("${env.FULL_IMAGE}:${env.GIT_TAG}", "./src/ratings")
                             retry(3) {
                                 myImage.push()
                             }
