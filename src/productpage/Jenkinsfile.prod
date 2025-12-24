@@ -8,6 +8,7 @@ metadata:
   labels:
     app: jenkins-agent-prod-deploy
 spec:
+  serviceAccountName: jenkins-deployer
   containers:
   - name: helm
     image: alpine/helm:3.12.0
