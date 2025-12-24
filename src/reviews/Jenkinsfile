@@ -173,6 +173,9 @@ spec:
                         def registryUrl = "https://${REGISTRY_URL}".toString()
                         def credentialsId = 'registry-bookinfo'
 
+                        // Wait for the private daemon to finish booting
+                        sh 'while ! docker info > /dev/null 2>&1; do sleep 1; done'
+
                         docker.withRegistry(registryUrl, credentialsId) {
                             def myImage = docker.build("${env.FULL_IMAGE}:${env.GIT_TAG}", "./src/reviews")
                             retry(3) {
