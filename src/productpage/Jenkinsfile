@@ -77,13 +77,13 @@ spec:
 
         CHART_DIR    = "helm-chart/productpage"
 
-        SONAR_SERVER_URL = "https://sast-supeem.opsta.in.th"
-        SONAR_PROJECT_KEY = "bookinfo-productpage"
-
         SAFE_BRANCH  = "${env.BRANCH_NAME != null ? env.BRANCH_NAME : 'dev'}"
         RELEASE_NAME = "${env.SAFE_BRANCH == 'main' ? 'bookinfo-productpage-uat' : 'bookinfo-productpage-dev'}"
         NAMESPACE    = "${env.SAFE_BRANCH == 'main' ? 'bookinfo-uat' : 'bookinfo-dev'}"
         VALUES_FILE  = "${env.SAFE_BRANCH == 'main' ? 'helm-chart/productpage/uat-productpage-values.yaml' : 'helm-chart/productpage/dev-productpage-values.yaml'}"
+
+        SONAR_SERVER_URL = "https://sast-supeem.opsta.in.th"
+        SONAR_PROJECT_KEY = "${env.SAFE_BRANCH == 'main' ?  "bookinfo-productpage" : " "bookinfo-productpage-dev"}"
 
         APP_URL      = "http://productpage.bookinfo-${SAFE_BRANCH}.svc.cluster.local:9080"
 

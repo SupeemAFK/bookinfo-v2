@@ -77,13 +77,13 @@ spec:
 
         CHART_DIR    = "helm-chart/ratings"
 
-        SONAR_SERVER_URL = "https://sast-supeem.opsta.in.th"
-        SONAR_PROJECT_KEY = "bookinfo-ratings"
-
         SAFE_BRANCH  = "${env.BRANCH_NAME != null ? env.BRANCH_NAME : 'dev'}"
         RELEASE_NAME = "${env.SAFE_BRANCH == 'main' ? 'bookinfo-ratings-uat' : 'bookinfo-ratings-dev'}"
         NAMESPACE    = "${env.SAFE_BRANCH == 'main' ? 'bookinfo-uat' : 'bookinfo-dev'}"
         VALUES_FILE  = "${env.SAFE_BRANCH == 'main' ? 'helm-chart/ratings/uat-ratings-values.yaml' : 'helm-chart/ratings/dev-ratings-values.yaml'}"
+
+        SONAR_SERVER_URL = "https://sast-supeem.opsta.in.th"
+        SONAR_PROJECT_KEY = "${env.SAFE_BRANCH == 'main' ?  "bookinfo-ratings" : " "bookinfo-ratings-dev"}"
 
         APP_URL      = "http://ratings.bookinfo-${SAFE_BRANCH}.svc.cluster.local:9080"
     }
