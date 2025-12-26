@@ -1,6 +1,6 @@
 # Bookinfo Application for Workshop
 
-## Example Installation for "dev" environment
+## Example Installation for "dev" environment 🚀
 - For others environment do the same just change environment. 
 - Also please install **nginx-ingress** and **cert-manager** first.
 
@@ -52,7 +52,7 @@ helm install bookinfo-ratings-dev helm-chart/ratings --namespace bookinfo-dev -f
 helm install bookinfo-reviews-dev helm-chart/reviews --namespace bookinfo-dev -f helm-chart/reviews/dev-ratings-values.yaml
 ```
 
-## Setup worload identity for jenkins worker
+## Setup worload identity for jenkins worker 🔑
 ### Update cluster
 ```
 gcloud container node-pools update [POOL_NAME] \
