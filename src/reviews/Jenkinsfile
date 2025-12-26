@@ -73,13 +73,13 @@ spec:
 
         CHART_DIR    = "helm-chart/reviews"
 
-        SONAR_SERVER_URL = "https://sast-supeem.opsta.in.th"
-        SONAR_PROJECT_KEY = "bookinfo-reviews"
-
         SAFE_BRANCH  = "${env.BRANCH_NAME != null ? env.BRANCH_NAME : 'dev'}"
         RELEASE_NAME = "${env.SAFE_BRANCH == 'main' ? 'bookinfo-reviews-uat' : 'bookinfo-reviews-dev'}"
         NAMESPACE    = "${env.SAFE_BRANCH == 'main' ? 'bookinfo-uat' : 'bookinfo-dev'}"
         VALUES_FILE  = "${env.SAFE_BRANCH == 'main' ? 'helm-chart/reviews/uat-reviews-values.yaml' : 'helm-chart/reviews/dev-reviews-values.yaml'}"
+
+        SONAR_SERVER_URL = "https://sast-supeem.opsta.in.th"
+        SONAR_PROJECT_KEY = "${env.SAFE_BRANCH == 'main' ?  'bookinfo-reviews' : 'bookinfo-reviews-dev'}"
 
         APP_URL      = "http://reviews.bookinfo-${SAFE_BRANCH}.svc.cluster.local:9080"
     }
@@ -170,24 +170,26 @@ spec:
             steps {
                 container('docker') {
                     script {
-                        def registryUrl = "https://${REGISTRY_URL}".toString()
-                        def credentialsId = 'registry-bookinfo'
-
                         // Wait for the private daemon to finish booting
                         sh 'while ! docker info > /dev/null 2>&1; do sleep 1; done'
 
-                        docker.withRegistry(registryUrl, credentialsId) {
-                            def myImage = docker.build("${env.FULL_IMAGE}:${env.GIT_TAG}", "./src/reviews")
+                        withCredentials([usernamePassword(credentialsId: 'registry-bookinfo', usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
+                            sh 'echo $REG_PASS | docker login ${REGISTRY_URL} -u "$REG_USER" --password-stdin'
+
+                            sh "docker build -t ${env.FULL_IMAGE}:${env.GIT_TAG} ./src/productpage"
+
                             retry(3) {
                                 try {
-                                    myImage.push()
-                                }
+                                    sh "docker push ${env.FULL_IMAGE}:${env.GIT_TAG}"
+                                } 
                                 catch (Exception e) {
                                     echo "Push failed, likely 500 error. Waiting 15s before retry..."
                                     sleep 15
                                     throw e 
                                 }
                             }
+                            
+                            sh 'docker logout ${REGISTRY_URL}'
                         }
                     }
                 }
