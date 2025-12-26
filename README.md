@@ -51,3 +51,46 @@ helm install bookinfo-ratings-dev helm-chart/ratings --namespace bookinfo-dev -f
 # Setup reviews service
 helm install bookinfo-reviews-dev helm-chart/reviews --namespace bookinfo-dev -f helm-chart/reviews/dev-ratings-values.yaml
 ```
+
+## Setup worload identity for jenkins worker
+### Update cluster
+```
+gcloud container node-pools update [POOL_NAME] \
+    --cluster=[CLUSTER_NAME] \
+    --zone=[ZONE] \
+    --workload-metadata=GKE_METADATA
+```
+
+### Setup workload identity
+```
+# 1. Create the GSA
+gcloud iam service-accounts create jenkins-gke-deployer
+
+# 2. Grant it permission to manage GKE
+gcloud projects add-iam-policy-binding [PROJECT_ID] \
+  --member="serviceAccount:jenkins-gke-deployer@[PROJECT_ID].iam.gserviceaccount.com" \
+  --role="roles/container.developer"
+
+# 3. Allow KSA to impersonate GSA (The Workload Identity Link)
+gcloud iam service-accounts add-iam-policy-binding \
+  jenkins-gke-deployer@[PROJECT_ID].iam.gserviceaccount.com \
+  --role="roles/iam.workloadIdentityUser" \
+  --member="serviceAccount:[PROJECT_ID].svc.id.goog[devops-tools/jenkins-deployer]"
+
+# 4. Annotate the KSA
+kubectl annotate serviceaccount jenkins-deployer \
+  --namespace devops-tools \
+  iam.gke.io/gcp-service-account=jenkins-gke-deployer@[PROJECT_ID].iam.gserviceaccount.com
+```
+
+### Apply rbac for namespaces
+```
+kubectl apply -f devops-tools/jenkins-rbac.yaml -n bookinfo-dev
+```
+
+### Checking authorization
+```
+kubectl auth can-i create deployments \
+  --namespace prod \
+  --as system:serviceaccount:devops-tools:jenkins-deployer
+```
