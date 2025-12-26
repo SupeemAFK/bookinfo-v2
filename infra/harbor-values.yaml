@@ -15,30 +15,83 @@ expose:
       cert-manager.io/cluster-issuer: "letsencrypt-prod"
       nginx.ingress.kubernetes.io/ssl-redirect: "true"
       nginx.ingress.kubernetes.io/proxy-body-size: "0"
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "900"
+      nginx.ingress.kubernetes.io/proxy-send-timeout: "900"
 
-notary:
-  enabled: false
+core:
+  replicas: 1
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "1Gi"   
+      cpu: "1000m"   
+
+jobservice:
+  replicas: 1
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+
+registry:
+  replicas: 1
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "2Gi"  
+      cpu: "1000m"
 
 trivy:
   enabled: true
+  replicas: 1
+  resources:
+    requests:
+      memory: "1Gi"  
+      cpu: "200m"
+    limits:
+      memory: "3Gi"   
+      cpu: "2000m" 
+
+database:
+  type: internal
+  internal:
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "1Gi"
+        cpu: "1000m"
+
+redis:
+  type: internal
+  internal:
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "1Gi"
+        cpu: "1000m"
 
 persistence:
   enabled: true
   resourcePolicy: "keep"
   persistentVolumeClaim:
     registry:
-      size: 10Gi
+      size: 20Gi  
     jobservice:
-      size: 1Gi
+      size: 2Gi
     database:
-      size: 1Gi
+      size: 2Gi
     redis:
-      size: 1Gi
+      size: 2Gi
     trivy:
-      size: 5Gi
-
-database:
-  type: internal
-
-redis:
-  type: internal
+      size: 10Gi
