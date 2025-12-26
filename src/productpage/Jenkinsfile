@@ -83,7 +83,7 @@ spec:
         VALUES_FILE  = "${env.SAFE_BRANCH == 'main' ? 'helm-chart/productpage/uat-productpage-values.yaml' : 'helm-chart/productpage/dev-productpage-values.yaml'}"
 
         SONAR_SERVER_URL = "https://sast-supeem.opsta.in.th"
-        SONAR_PROJECT_KEY = "${env.SAFE_BRANCH == 'main' ?  "bookinfo-productpage" : " "bookinfo-productpage-dev"}"
+        SONAR_PROJECT_KEY = "${env.SAFE_BRANCH == 'main' ?  'bookinfo-productpage' : 'bookinfo-productpage-dev'}"
 
         APP_URL      = "http://productpage.bookinfo-${SAFE_BRANCH}.svc.cluster.local:9080"
 

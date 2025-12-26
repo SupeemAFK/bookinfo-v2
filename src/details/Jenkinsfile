@@ -79,7 +79,7 @@ spec:
         VALUES_FILE  = "${env.SAFE_BRANCH == 'main' ? 'helm-chart/details/uat-details-values.yaml' : 'helm-chart/details/dev-details-values.yaml'}"
 
         SONAR_SERVER_URL = "https://sast-supeem.opsta.in.th"
-        SONAR_PROJECT_KEY = "${env.SAFE_BRANCH == 'main' ?  "bookinfo-details" : " "bookinfo-details-dev"}"
+        SONAR_PROJECT_KEY = "${env.SAFE_BRANCH == 'main' ?  'bookinfo-details' : 'bookinfo-details-dev'}"
 
         APP_URL      = "http://details.bookinfo-${SAFE_BRANCH}.svc.cluster.local:9080"
     }
