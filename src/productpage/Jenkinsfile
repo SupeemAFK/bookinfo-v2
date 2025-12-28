@@ -274,7 +274,7 @@ spec:
                             zap-baseline.py -t ${env.APP_URL} \
                             -r zap-report.html \
                             --autooff \
-                            -z "-config connection.timeoutInSecs=60" || true
+                            -z "-config connection.timeoutInSecs=60"
                         """
 
                         if (fileExists('zap-report.html')) {
