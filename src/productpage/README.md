@@ -1,4 +1,4 @@
-# How to run product page
+# How to run product page.
 
 ## Prerequisite
 
