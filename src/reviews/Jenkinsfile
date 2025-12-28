@@ -154,8 +154,7 @@ spec:
                         --scan ./src/reviews/build.gradle \
                         --format HTML \
                         --format XML \
-                        --out . \
-                        --enableExperimental
+                        --out .
                     '''
                 }
             }
