@@ -193,7 +193,7 @@ spec:
             steps {
                 container('docker') {
                     script {
-                        // Wait for the private daemon to finish booting
+                        // Wait for the private daemon to finish booting.
                         sh 'while ! docker info > /dev/null 2>&1; do sleep 1; done'
 
                         withCredentials([usernamePassword(credentialsId: 'registry-bookinfo', usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
