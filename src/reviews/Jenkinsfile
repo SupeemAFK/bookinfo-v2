@@ -81,7 +81,7 @@ spec:
         SONAR_SERVER_URL = "https://sast-supeem.opsta.in.th"
         SONAR_PROJECT_KEY = "${env.SAFE_BRANCH == 'main' ?  'bookinfo-reviews' : 'bookinfo-reviews-dev'}"
 
-        APP_URL      = "http://reviews.bookinfo-${SAFE_BRANCH}.svc.cluster.local:9080"
+        APP_URL      = "http://${RELEASE_NAME}.${NAMESPACE}.svc.cluster.local:9080"
     }
 
     stages {
@@ -154,8 +154,7 @@ spec:
                         --scan ./src/reviews/build.gradle \
                         --format HTML \
                         --format XML \
-                        --out . \
-                        --enableExperimental
+                        --out .
                     '''
                 }
             }
@@ -251,12 +250,14 @@ spec:
                             zap-baseline.py -t ${env.APP_URL} \
                             -r zap-report.html \
                             --autooff \
-                            -z "-config connection.timeoutInSecs=60" || true
+                            -I \
+                            -z "-config connection.timeoutInSecs=60"
                         """
 
                         if (fileExists('zap-report.html')) {
                             sh "mkdir -p zap-out && cp zap-report.html zap-out/index.html && chmod -R 755 zap-out"
-                        } else {
+                        } 
+                        else {
                             echo "ZAP Failed. Running debug..."
                             sh "nslookup \$(echo ${env.APP_URL} | sed 's|http://||' | cut -d: -f1)"
                         }
