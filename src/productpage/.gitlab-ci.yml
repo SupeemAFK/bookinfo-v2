@@ -2,6 +2,7 @@ stages:
   - scan
   - test
   - build
+  - image-scan  
   - deploy
   - dast
 
@@ -10,28 +11,16 @@ variables:
   IMAGE_PATH: "library/productpage-service"
   CHART_DIR: "helm-chart/productpage"
   SONAR_SERVER_URL: "https://sast-supeem.opsta.in.th"
-  
-  DOCKER_HOST: tcp://docker:2375
+  DOCKER_HOST: "tcp://docker:2375"
   DOCKER_TLS_CERTDIR: ""
-  DOCKER_DRIVER: overlay2
+  DOCKER_DRIVER: "overlay2"
 
 .env_setup:
   before_script:
     - export GIT_TAG=$CI_COMMIT_SHORT_SHA
-    - |
-      if [[ "$CI_COMMIT_REF_NAME" == "main" ]]; then
-        export RELEASE_NAME="bookinfo-productpage-uat"
-        export NAMESPACE="bookinfo-uat"
-        export VALUES_FILE="helm-chart/productpage/uat-productpage-values.yaml"
-        export SONAR_PROJECT_KEY="bookinfo-productpage"
-      else
-        export RELEASE_NAME="bookinfo-productpage-dev"
-        export NAMESPACE="bookinfo-dev"
-        export VALUES_FILE="helm-chart/productpage/dev-productpage-values.yaml"
-        export SONAR_PROJECT_KEY="bookinfo-productpage-dev"
-      fi
+
+    - 'if [[ "$CI_COMMIT_REF_NAME" == "main" ]]; then export RELEASE_NAME="bookinfo-productpage-uat"; export NAMESPACE="bookinfo-uat"; export VALUES_FILE="helm-chart/productpage/uat-productpage-values.yaml"; export SONAR_PROJECT_KEY="bookinfo-productpage"; else export RELEASE_NAME="bookinfo-productpage-dev"; export NAMESPACE="bookinfo-dev"; export VALUES_FILE="helm-chart/productpage/dev-productpage-values.yaml"; export SONAR_PROJECT_KEY="bookinfo-productpage-dev"; fi'
     - export FULL_IMAGE="${REGISTRY_URL}/${IMAGE_PATH}"
-    # Quoting this line is crucial because of the http: and :9080 colons
     - "export APP_URL=http://${RELEASE_NAME}.${NAMESPACE}.svc.cluster.local:9080"
 
 kics-scan:
@@ -103,7 +92,7 @@ build-push:
     - docker logout ${REGISTRY_URL}
 
 trivy-scan:
-  stage: build
+  stage: image-scan
   needs: ["build-push"]
   image:
     name: aquasec/trivy:latest
