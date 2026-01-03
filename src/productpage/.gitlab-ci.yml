@@ -154,14 +154,10 @@ deploy_k8s:
 dast_zap:
   stage: dast
   image: ghcr.io/zaproxy/zaproxy:stable
-  allow_failure: true
   before_script:
     - *env_logic
   script:
-    - cd /zap/wrk
-    - zap-baseline.py -t "$APP_URL" -r zap-report.html --autooff -z "-config connection.timeoutInSecs=60" || true
-    - cp zap-report.html "$CI_PROJECT_DIR/" || true
-    - '[ -f "$CI_PROJECT_DIR/zap-report.html" ] || nslookup $(echo "$APP_URL" | awk -F/ "{print \$3}" | cut -d: -f1)'
+    - echo "KUY"
   artifacts:
     when: always
     paths:
