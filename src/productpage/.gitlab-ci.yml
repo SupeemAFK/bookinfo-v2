@@ -31,14 +31,14 @@ variables:
     export RELEASE_NAME="bookinfo-productpage-${TARGET_ENV}"
     export NAMESPACE="bookinfo-${TARGET_ENV}"
     export VALUES_FILE="helm-chart/productpage/${TARGET_ENV}-productpage-values.yaml"
-    export APP_URL="http://productpage.bookinfo-${SAFE_BRANCH}.svc.cluster.local:9080"
+    export APP_URL="http://${RELEASE_NAME}.${NAMESPACE}.svc.cluster.local:9080"
     
     export DETAILS_HOSTNAME="http://bookinfo-details-${TARGET_ENV}:9080"
     export RATINGS_HOSTNAME="http://bookinfo-ratings-${TARGET_ENV}:9080"
     export REVIEWS_HOSTNAME="http://bookinfo-reviews-${TARGET_ENV}:9080"
 
-    export GIT_TAG=$(git rev-parse --short HEAD)
-
+    export GIT_TAG="${CI_COMMIT_SHORT_SHA}"
+    
 iac_scan_kics:
   stage: scan
   image: 
