@@ -153,5 +153,25 @@ deploy_k8s:
 
 dast_zap:
   stage: dast
+  image: ghcr.io/zaproxy/zaproxy:stable
+  allow_failure: true
+  before_script:
+    - *env_logic
   script:
-    - echo "HEY MA"
+    # Using the pipe (|) ensures GitLab handles this block safely
+    - |
+      echo "Setting up ZAP working directory..."
+      mkdir -p /zap/wrk
+      cd /zap/wrk
+    # Run the scan
+    - |
+      echo "Starting ZAP Baseline Scan against ${APP_URL}..."
+      zap-baseline.py -t "${APP_URL}" -r zap-report.html --autooff -z "-config connection.timeoutInSecs=60" || true
+    # Copy artifact back
+    - |
+      echo "Copying report to artifacts directory..."
+      cp zap-report.html "$CI_PROJECT_DIR/" || true
+  artifacts:
+    when: always
+    paths:
+      - zap-report.html
