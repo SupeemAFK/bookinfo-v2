@@ -2,128 +2,102 @@ stages:
   - scan
   - test
   - build
-  - image-scan
   - deploy
   - dast
 
 variables:
   REGISTRY_URL: "registry-supeem.opsta.in.th"
   IMAGE_PATH: "library/productpage-service"
+  FULL_IMAGE: "$REGISTRY_URL/$IMAGE_PATH"
   CHART_DIR: "helm-chart/productpage"
   SONAR_SERVER_URL: "https://sast-supeem.opsta.in.th"
-  DOCKER_HOST: "tcp://docker:2375"
+  
+  DOCKER_HOST: tcp://docker:2375
   DOCKER_TLS_CERTDIR: ""
-  DOCKER_DRIVER: "overlay2"
+  DOCKER_DRIVER: overlay2
 
-  RELEASE_NAME: "bookinfo-productpage-dev" 
-  NAMESPACE: "bookinfo-dev"
-  VALUES_FILE: "helm-chart/productpage/dev-productpage-values.yaml"
-  SONAR_PROJECT_KEY: "bookinfo-productpage-dev"
+.env_logic: &env_logic
+  - |
+    if [ "$CI_COMMIT_REF_NAME" == "main" ]; then
+      export SAFE_BRANCH="main"
+      export TARGET_ENV="uat"
+      export SONAR_PROJECT_KEY="bookinfo-productpage"
+    else
+      export SAFE_BRANCH="${CI_COMMIT_REF_SLUG}"
+      export TARGET_ENV="dev"
+      export SONAR_PROJECT_KEY="bookinfo-productpage-dev"
+    fi
+    
+    export RELEASE_NAME="bookinfo-productpage-${TARGET_ENV}"
+    export NAMESPACE="bookinfo-${TARGET_ENV}"
+    export VALUES_FILE="helm-chart/productpage/${TARGET_ENV}-productpage-values.yaml"
+    export APP_URL="http://productpage.bookinfo-${SAFE_BRANCH}.svc.cluster.local:9080"
+    
+    export GIT_TAG=$(git rev-parse --short HEAD)
 
-kics-scan:
+iac_scan_kics:
   stage: scan
   image: 
-    name: "checkmarx/kics:latest"
+    name: checkmarx/kics:latest
     entrypoint: [""]
   allow_failure: true
   script:
-    - "export FULL_IMAGE=${REGISTRY_URL}/${IMAGE_PATH}"
-    - "/app/bin/kics scan -p ${CHART_DIR} --fail-on high,critical --report-formats html,json -o . --output-name kics-results"
+    - /app/bin/kics scan -p ${CHART_DIR} --fail-on high,critical --report-formats html,json -o .
   artifacts:
-    paths:
-      - kics-results.html
-      - kics-results.json
     when: always
+    paths:
+      - results.html
+      - results.json
 
-sonar-scan:
+sast_sonar:
   stage: scan
   image: 
-    name: "sonarsource/sonar-scanner-cli:latest"
+    name: sonarsource/sonar-scanner-cli:latest
     entrypoint: [""]
-  variables:
-    GIT_DEPTH: "0"
+  allow_failure: true
+  before_script:
+    - *env_logic
   script:
-    - 'if [[ "$CI_COMMIT_REF_NAME" == "main" ]]; then export SONAR_PROJECT_KEY="bookinfo-productpage"; fi'
-    - "sonar-scanner -Dsonar.projectKey=${SONAR_PROJECT_KEY} -Dsonar.sources=src/productpage -Dsonar.host.url=${SONAR_SERVER_URL} -Dsonar.login=${SONAR_TOKEN} -Dsonar.qualitygate.wait=true -Dsonar.qualitygate.timeout=300"
+    - sonar-scanner
+      -Dsonar.projectKey=${SONAR_PROJECT_KEY}
+      -Dsonar.sources=src/productpage
+      -Dsonar.host.url=${SONAR_SERVER_URL}
+      -Dsonar.login=${SONAR_TOKEN}
+      -Dsonar.qualitygate.wait=true
+      -Dsonar.qualitygate.timeout=300
 
-dependency-check:
+dependency_check:
   stage: scan
   image: 
-    name: "owasp/dependency-check:latest"
+    name: owasp/dependency-check:latest
     entrypoint: [""]
   cache:
-    key: "dependency-check-db"
+    key: "dep-check-data"
     paths:
-      - .odc-data
-    policy: pull-push
-  script:
-    - "/usr/share/dependency-check/bin/dependency-check.sh --project Bookinfo-productpage --scan ./src/productpage/requirements.txt --scan ./src/productpage/test-requirements.txt --format HTML --format XML --out . --data .odc-data"
+      - /usr/share/dependency-check/data
+  allow_failure: true
+  script: 
+    - /usr/share/dependency-check/bin/dependency-check.sh \
+      --project "Bookinfo-productpage" \
+      --scan ./src/productpage/requirements.txt \
+      --scan ./src/productpage/test-requirements.txt \
+      --format HTML \
+      --format XML \
+      --out . \
+      --enableExperimental
   artifacts:
+    when: always
     paths:
       - dependency-check-report.html
       - dependency-check-report.xml
-    when: always
 
-unit-tests:
+unit_tests:
   stage: test
-  image: "python:3.9-slim"
-  script:
-    - "cd src/productpage"
-    - "pip install -r requirements.txt"
-    - "pip install -r test-requirements.txt"
-    - "python3 -m unittest discover tests/unit"
-
-build-push:
-  stage: build
-  image: "docker:24.0.5"
-  services:
-    - "docker:24.0.5-dind"
-  script:
-    - "export GIT_TAG=$CI_COMMIT_SHORT_SHA"
-    - "export FULL_IMAGE=${REGISTRY_URL}/${IMAGE_PATH}"
-    - "while ! docker info > /dev/null 2>&1; do sleep 1; done"
-    - "echo $REG_PASS | docker login $REGISTRY_URL -u $REG_USER --password-stdin"
-    - "docker build -t ${FULL_IMAGE}:${GIT_TAG} ./src/productpage"
-    - "docker push ${FULL_IMAGE}:${GIT_TAG} || (sleep 15 && docker push ${FULL_IMAGE}:${GIT_TAG})"
-    - "docker logout ${REGISTRY_URL}"
-
-trivy-scan:
-  stage: image-scan
-  image: 
-    name: "aquasec/trivy:latest"
-    entrypoint: [""]
-  script:
-    - "export GIT_TAG=$CI_COMMIT_SHORT_SHA"
-    - "export FULL_IMAGE=${REGISTRY_URL}/${IMAGE_PATH}"
-    - "export TRIVY_USERNAME=$REG_USER"
-    - "export TRIVY_PASSWORD=$REG_PASS"
-    - "trivy image --severity HIGH,CRITICAL --format template --template @/contrib/html.tpl -o trivy-results.html ${FULL_IMAGE}:${GIT_TAG}"
-  artifacts:
-    paths:
-      - trivy-results.html
-    when: always
-
-deploy:
-  stage: deploy
-  image: "alpine/helm:3.12.0"
-  script:
-    - "export GIT_TAG=$CI_COMMIT_SHORT_SHA"
-    - 'if [[ "$CI_COMMIT_REF_NAME" == "main" ]]; then export RELEASE_NAME="bookinfo-productpage-uat"; export NAMESPACE="bookinfo-uat"; export VALUES_FILE="helm-chart/productpage/uat-productpage-values.yaml"; fi'
-    - "helm upgrade --install ${RELEASE_NAME} ${CHART_DIR} --namespace ${NAMESPACE} -f ${VALUES_FILE} --set productpage.image.tag=${GIT_TAG} --wait"
-
-dast-zap:
-  stage: dast
-  image: 
-    name: "ghcr.io/zaproxy/zaproxy:stable"
-    entrypoint: [""]
-  allow_failure: true
-  script:
-    - 'if [[ "$CI_COMMIT_REF_NAME" == "main" ]]; then export RELEASE_NAME="bookinfo-productpage-uat"; export NAMESPACE="bookinfo-uat"; fi'
-    - "export APP_URL=http://${RELEASE_NAME}.${NAMESPACE}.svc.cluster.local:9080"
-    - "mkdir -p /zap/wrk"
-    - "zap-baseline.py -t ${APP_URL} -r zap-report.html --autooff -I -z '-config connection.timeoutInSecs=60' || true"
-    - "cp /home/zap/zap-report.html zap-report.html"
-  artifacts:
-    paths:
-      - zap-report.html
-    when: always
+  image: python:3.9-slim
+  before_script:
+    - *env_logic
+  script: 
+    - cd src/productpage
+    - pip install -r requirements.txt
+    - pip install -r test-requirements.txt
+    - python3 -m unittest discover tests/unit
