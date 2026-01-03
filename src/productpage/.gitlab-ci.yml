@@ -18,7 +18,7 @@ variables:
 
 .env_logic: &env_logic
   - |
-    if [ "$CI_COMMIT_REF_NAME" == "main" ]; then
+    if [ "$CI_COMMIT_REF_NAME" = "main" ]; then
       export SAFE_BRANCH="main"
       export TARGET_ENV="uat"
       export SONAR_PROJECT_KEY="bookinfo-productpage"
@@ -147,6 +147,7 @@ deploy_k8s:
   before_script:
     - *env_logic
   script:
+    - echo "Deploying Release ${RELEASE_NAME} to Namespace ${NAMESPACE}"
     - helm upgrade --install ${RELEASE_NAME} ${CHART_DIR} \
       --namespace ${NAMESPACE} \
       -f ${VALUES_FILE} \
