@@ -161,9 +161,17 @@ dast_zap:
     - mkdir -p /zap/wrk
     - cp -r . /zap/wrk/
     - cd /zap/wrk
-    - zap-baseline.py -t "${APP_URL}" -r zap-report.html --autooff -z "-config connection.timeoutInSecs=60" || true
+    - |
+      zap-baseline.py -t "${APP_URL}" \
+      -r zap-report.html \
+      --autooff \
+      -z "-config connection.timeoutInSecs=60" || true
     - cp zap-report.html "$CI_PROJECT_DIR/" || true
-    - if [ ! -f zap-report.html ]; then nslookup $(echo "${APP_URL}" | sed -E 's|https?://||' | cut -d: -f1); fi
+    - |
+      if [ ! -f zap-report.html ]; then 
+        echo "Report not found, checking DNS..."
+        nslookup $(echo "${APP_URL}" | sed -E 's|https?://||' | cut -d: -f1)
+      fi
   artifacts:
     when: always
     paths:
