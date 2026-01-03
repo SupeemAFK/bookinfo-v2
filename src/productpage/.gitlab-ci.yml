@@ -126,7 +126,9 @@ build_push:
 scan_image_trivy:
   stage: build
   needs: ["build_push"]
-  image: aquasec/trivy:latest
+  image:
+    name: aquasec/trivy:latest
+    entrypoint: [""] 
   services:
     - docker:24.0.5-dind
   before_script:
