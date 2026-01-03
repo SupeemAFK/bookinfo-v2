@@ -152,13 +152,16 @@ deploy_k8s:
 
 dast_zap:
   stage: deploy
-  image: ghcr.io/zaproxy/zaproxy:stable
+  needs: ["deploy_k8s"]
+  image: 
+    name: ghcr.io/zaproxy/zaproxy:stable
+    entrypoint: [""]
   script:
     - mkdir -p /zap/wrk
     - cp -r . /zap/wrk/
     - cd /zap/wrk
-    - zap-baseline.py -t "$APP_URL" -r zap-report.html --autooff -z "-config connection.timeoutInSecs=60" || true
-    - cp zap-report.html "$CI_PROJECT_DIR/" || true
+    - zap-baseline.py -t ${env.APP_URL} -r zap-report.html --autooff -I -z "-config connection.timeoutInSecs=60"
+    - cp zap-report.html ${CI_PROJECT_DIR} || true
     - |
       if [ ! -f zap-report.html ]; then 
         echo "Report not found, checking DNS..."
