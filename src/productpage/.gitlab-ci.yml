@@ -37,7 +37,7 @@ kics-scan:
   stage: scan
   image:
     name: checkmarx/kics:latest
-    entrypoint: [""] 
+    entrypoint: [""]
   extends: .env_setup
   script:
     - /app/bin/kics scan -p ${CHART_DIR} --fail-on high,critical --report-formats html,json -o . --output-name kics-results
@@ -55,14 +55,15 @@ sonar-scan:
     entrypoint: [""]
   extends: .env_setup
   variables:
-    GIT_DEPTH: "0" 
+    GIT_DEPTH: "0"
   script:
-    - sonar-scanner
-      -Dsonar.projectKey=${SONAR_PROJECT_KEY}
-      -Dsonar.sources=src/productpage
-      -Dsonar.host.url=${SONAR_SERVER_URL}
-      -Dsonar.login=${SONAR_TOKEN}
-      -Dsonar.qualitygate.wait=true
+    - |
+      sonar-scanner \
+      -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+      -Dsonar.sources=src/productpage \
+      -Dsonar.host.url=${SONAR_SERVER_URL} \
+      -Dsonar.login=${SONAR_TOKEN} \
+      -Dsonar.qualitygate.wait=true \
       -Dsonar.qualitygate.timeout=300
 
 dependency-check:
@@ -77,12 +78,13 @@ dependency-check:
       - .odc-data
     policy: pull-push
   script:
-    - /usr/share/dependency-check/bin/dependency-check.sh
-      --project "Bookinfo-productpage"
-      --scan ./src/productpage/requirements.txt
-      --scan ./src/productpage/test-requirements.txt
-      --format HTML --format XML
-      --out .
+    - |
+      /usr/share/dependency-check/bin/dependency-check.sh \
+      --project "Bookinfo-productpage" \
+      --scan ./src/productpage/requirements.txt \
+      --scan ./src/productpage/test-requirements.txt \
+      --format HTML --format XML \
+      --out . \
       --data .odc-data
   artifacts:
     paths:
@@ -118,7 +120,7 @@ build-push:
 
 trivy-scan:
   stage: build
-  needs: ["build-push"] 
+  needs: ["build-push"]
   image:
     name: aquasec/trivy:latest
     entrypoint: [""]
@@ -137,10 +139,11 @@ deploy:
   image: alpine/helm:3.12.0
   extends: .env_setup
   script:
-    - helm upgrade --install ${RELEASE_NAME} ${CHART_DIR}
-      --namespace ${NAMESPACE}
-      -f ${VALUES_FILE}
-      --set productpage.image.tag=${GIT_TAG}
+    - |
+      helm upgrade --install ${RELEASE_NAME} ${CHART_DIR} \
+      --namespace ${NAMESPACE} \
+      -f ${VALUES_FILE} \
+      --set productpage.image.tag=${GIT_TAG} \
       --wait
 
 dast-zap:
