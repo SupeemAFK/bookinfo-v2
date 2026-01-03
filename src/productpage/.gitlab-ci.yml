@@ -153,7 +153,9 @@ deploy_k8s:
 
 dast_zap:
   stage: dast
-  image: ghcr.io/zaproxy/zaproxy:stable
+  image: 
+    name: ghcr.io/zaproxy/zaproxy:stable
+    entrypoint: [""]
   before_script:
     - *env_logic
   script:
