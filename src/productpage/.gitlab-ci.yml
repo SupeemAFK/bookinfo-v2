@@ -154,4 +154,4 @@ deploy_k8s:
 dast_zap:
   stage: dast
   script:
-    - echo "Manual Type Test"
+    - echo "TESST RAWW"
