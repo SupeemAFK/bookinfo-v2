@@ -154,4 +154,4 @@ deploy_k8s:
 dast_zap:
   stage: dast
   script:
-    - echo "TESST RAWW"
+    - echo "HEY MA"
