@@ -38,7 +38,7 @@ variables:
     export REVIEWS_HOSTNAME="http://bookinfo-reviews-${TARGET_ENV}:9080"
 
     export GIT_TAG="${CI_COMMIT_SHORT_SHA}"
-    
+
 iac_scan_kics:
   stage: scan
   image: 
@@ -122,3 +122,17 @@ build_push:
         docker push ${FULL_IMAGE}:${GIT_TAG} && break || sleep 15
       done
     - docker logout ${REGISTRY_URL}
+
+scan_image_trivy:
+  stage: build
+  needs: ["build_push"]
+  image: aquasec/trivy:latest
+  services:
+    - docker:24.0.5-dind
+  before_script:
+    - *env_logic
+  script:
+    - trivy image --severity HIGH,CRITICAL --format template --template '@/contrib/html.tpl' -o trivy-results.html ${FULL_IMAGE}:${GIT_TAG}
+  artifacts:
+    paths:
+      - trivy-results.html
