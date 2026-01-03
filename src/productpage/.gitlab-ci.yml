@@ -1,0 +1,160 @@
+stages:
+  - scan
+  - test
+  - build
+  - deploy
+  - dast
+
+variables:
+  REGISTRY_URL: "registry-supeem.opsta.in.th"
+  IMAGE_PATH: "library/productpage-service"
+  CHART_DIR: "helm-chart/productpage"
+  SONAR_SERVER_URL: "https://sast-supeem.opsta.in.th"
+
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_TLS_CERTDIR: ""
+  DOCKER_DRIVER: overlay2
+
+.env_setup:
+  before_script:
+    - export GIT_TAG=$(git rev-parse --short HEAD)
+    - |
+      if [[ "$CI_COMMIT_REF_NAME" == "main" ]]; then
+        export RELEASE_NAME="bookinfo-productpage-uat"
+        export NAMESPACE="bookinfo-uat"
+        export VALUES_FILE="helm-chart/productpage/uat-productpage-values.yaml"
+        export SONAR_PROJECT_KEY="bookinfo-productpage"
+      else
+        export RELEASE_NAME="bookinfo-productpage-dev"
+        export NAMESPACE="bookinfo-dev"
+        export VALUES_FILE="helm-chart/productpage/dev-productpage-values.yaml"
+        export SONAR_PROJECT_KEY="bookinfo-productpage-dev"
+      fi
+    - export FULL_IMAGE="${REGISTRY_URL}/${IMAGE_PATH}"
+    - export APP_URL="http://${RELEASE_NAME}.${NAMESPACE}.svc.cluster.local:9080"
+
+kics-scan:
+  stage: scan
+  image:
+    name: checkmarx/kics:latest
+    entrypoint: [""] 
+  extends: .env_setup
+  script:
+    - /app/bin/kics scan -p ${CHART_DIR} --fail-on high,critical --report-formats html,json -o . --output-name kics-results
+  allow_failure: true
+  artifacts:
+    paths:
+      - kics-results.html
+      - kics-results.json
+    when: always
+
+sonar-scan:
+  stage: scan
+  image:
+    name: sonarsource/sonar-scanner-cli:latest
+    entrypoint: [""]
+  extends: .env_setup
+  variables:
+    GIT_DEPTH: "0" 
+  script:
+    - sonar-scanner
+      -Dsonar.projectKey=${SONAR_PROJECT_KEY}
+      -Dsonar.sources=src/productpage
+      -Dsonar.host.url=${SONAR_SERVER_URL}
+      -Dsonar.login=${SONAR_TOKEN}
+      -Dsonar.qualitygate.wait=true
+      -Dsonar.qualitygate.timeout=300
+
+dependency-check:
+  stage: scan
+  image:
+    name: owasp/dependency-check:latest
+    entrypoint: [""]
+  extends: .env_setup
+  cache:
+    key: dependency-check-db
+    paths:
+      - .odc-data
+    policy: pull-push
+  script:
+    - /usr/share/dependency-check/bin/dependency-check.sh
+      --project "Bookinfo-productpage"
+      --scan ./src/productpage/requirements.txt
+      --scan ./src/productpage/test-requirements.txt
+      --format HTML --format XML
+      --out .
+      --data .odc-data
+  artifacts:
+    paths:
+      - dependency-check-report.html
+      - dependency-check-report.xml
+    when: always
+
+unit-tests:
+  stage: test
+  image: python:3.9-slim
+  extends: .env_setup
+  script:
+    - cd src/productpage
+    - pip install -r requirements.txt
+    - pip install -r test-requirements.txt
+    - python3 -m unittest discover tests/unit
+
+build-push:
+  stage: build
+  image: docker:24.0.5
+  services:
+    - docker:24.0.5-dind
+  extends: .env_setup
+  script:
+    - while ! docker info > /dev/null 2>&1; do sleep 1; done
+    - echo "$REG_PASS" | docker login $REGISTRY_URL -u "$REG_USER" --password-stdin
+    - docker build -t ${FULL_IMAGE}:${GIT_TAG} ./src/productpage
+    - |
+      for i in 1 2 3; do
+        docker push ${FULL_IMAGE}:${GIT_TAG} && break || sleep 15
+      done
+    - docker logout ${REGISTRY_URL}
+
+trivy-scan:
+  stage: build
+  needs: ["build-push"] 
+  image:
+    name: aquasec/trivy:latest
+    entrypoint: [""]
+  extends: .env_setup
+  script:
+    - export TRIVY_USERNAME=$REG_USER
+    - export TRIVY_PASSWORD=$REG_PASS
+    - trivy image --severity HIGH,CRITICAL --format template --template "@/contrib/html.tpl" -o trivy-results.html ${FULL_IMAGE}:${GIT_TAG}
+  artifacts:
+    paths:
+      - trivy-results.html
+    when: always
+
+deploy:
+  stage: deploy
+  image: alpine/helm:3.12.0
+  extends: .env_setup
+  script:
+    - helm upgrade --install ${RELEASE_NAME} ${CHART_DIR}
+      --namespace ${NAMESPACE}
+      -f ${VALUES_FILE}
+      --set productpage.image.tag=${GIT_TAG}
+      --wait
+
+dast-zap:
+  stage: dast
+  image:
+    name: ghcr.io/zaproxy/zaproxy:stable
+    entrypoint: [""]
+  extends: .env_setup
+  allow_failure: true
+  script:
+    - mkdir -p /zap/wrk
+    - zap-baseline.py -t ${APP_URL} -r zap-report.html --autooff -I -z "-config connection.timeoutInSecs=60" || true
+    - cp /home/zap/zap-report.html zap-report.html
+  artifacts:
+    paths:
+      - zap-report.html
+    when: always
