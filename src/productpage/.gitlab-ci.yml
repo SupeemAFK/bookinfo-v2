@@ -150,3 +150,10 @@ deploy_k8s:
     - chmod 600 $KUBECONFIG
     - echo "Deploying Release ${RELEASE_NAME} to Namespace ${NAMESPACE}"
     - helm upgrade --install ${RELEASE_NAME} ${CHART_DIR} --namespace ${NAMESPACE} -f ${VALUES_FILE} --set productpage.image.tag=${GIT_TAG} --kube-insecure-skip-tls-verify --wait
+
+dast_zap:
+  stage: dast
+  image: ghcr.io/zaproxy/zaproxy:stable
+  allow_failure: true
+  script:
+    - echo "Test Run"
