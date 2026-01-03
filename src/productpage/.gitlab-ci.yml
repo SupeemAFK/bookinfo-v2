@@ -142,7 +142,7 @@ scan_image_trivy:
 deploy_k8s:
   stage: deploy
   image: 
-    name: alpine/helm:3.12.0
+    name: dtzar/helm-kubectl:3.13
     entrypoint: [""] 
   variables:
     KUBERNETES_SERVICE_ACCOUNT_OVERWRITE: "gitlab-deployer"
@@ -150,15 +150,16 @@ deploy_k8s:
     - *env_logic
   script:
     - echo "Deploying Release ${RELEASE_NAME} to Namespace ${NAMESPACE}"
+    
     - export KUBE_TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
     - export KUBE_CA_FILE=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
     - export KUBE_API_URL="https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT}"
-    
-    - helm upgrade --install ${RELEASE_NAME} ${CHART_DIR} 
-      --namespace ${NAMESPACE} 
-      -f ${VALUES_FILE} 
-      --set productpage.image.tag=${GIT_TAG} 
-      --kube-apiserver ${KUBE_API_URL} 
-      --kube-token ${KUBE_TOKEN} 
-      --kube-ca-file ${KUBE_CA_FILE}
+
+    - helm upgrade --install ${RELEASE_NAME} ${CHART_DIR} \
+      --namespace ${NAMESPACE} \
+      -f ${VALUES_FILE} \
+      --set productpage.image.tag=${GIT_TAG} \
+      --kube-apiserver ${KUBE_API_URL} \
+      --kube-token ${KUBE_TOKEN} \
+      --kube-ca-file ${KUBE_CA_FILE} \
       --wait
