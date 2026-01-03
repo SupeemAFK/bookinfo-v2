@@ -3,7 +3,6 @@ stages:
   - test
   - build
   - deploy
-  - dast
 
 variables:
   REGISTRY_URL: "registry-supeem.opsta.in.th"
@@ -152,7 +151,7 @@ deploy_k8s:
     - helm upgrade --install ${RELEASE_NAME} ${CHART_DIR} --namespace ${NAMESPACE} -f ${VALUES_FILE} --set productpage.image.tag=${GIT_TAG} --kube-insecure-skip-tls-verify --wait
 
 dast_zap:
-  stage: dast
+  stage: deploy
   image: ghcr.io/zaproxy/zaproxy:stable
   script:
     - mkdir -p /zap/wrk
