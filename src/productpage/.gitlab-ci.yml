@@ -153,7 +153,5 @@ deploy_k8s:
 
 dast_zap:
   stage: dast
-  image: ghcr.io/zaproxy/zaproxy:stable
-  allow_failure: true
   script:
-    - echo "Test Run"
+    - echo "Manual Type Test"
