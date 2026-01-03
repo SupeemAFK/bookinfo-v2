@@ -139,22 +139,6 @@ scan_image_trivy:
     paths:
       - trivy-results.html
 
-deploy_k8s:
-  stage: deploy
-  image: 
-    name: alpine/helm:3.12.0
-    entrypoint: [""] 
-  before_script:
-    - *env_logic
-    - chmod 600 $KUBECONFIG
-  script:
-    - helm upgrade --install ${RELEASE_NAME} ${CHART_DIR}
-      --namespace ${NAMESPACE}
-      --kubeconfig $KUBECONFIG
-      -f ${VALUES_FILE}
-      --set productpage.image.tag=${GIT_TAG}
-      --wait
-
 dast_zap:
   stage: dast
   image:
