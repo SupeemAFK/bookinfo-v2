@@ -1,0 +1,11 @@
+stages:
+  - productpage
+
+trigger_service_a:
+  stage: productpage
+  trigger:
+    include: src/productpage/.gitlab-ci.yml
+    strategy: depend
+  #rules:
+  #  - changes:
+  #    - src/productpage/**/*
