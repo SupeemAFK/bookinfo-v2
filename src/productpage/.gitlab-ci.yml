@@ -1,0 +1,199 @@
+stages:
+  - scan
+  - test
+  - build
+  - deploy
+
+variables:
+  REGISTRY_URL: "registry-supeem.opsta.in.th"
+  IMAGE_PATH: "library/productpage-service"
+  FULL_IMAGE: "$REGISTRY_URL/$IMAGE_PATH"
+  CHART_DIR: "helm-chart/productpage"
+  SONAR_SERVER_URL: "https://sast-supeem.opsta.in.th"
+  
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_TLS_CERTDIR: ""
+  DOCKER_DRIVER: overlay2
+
+.env_logic: &env_logic
+  - |
+    if [ "$CI_COMMIT_REF_NAME" = "main" ]; then
+      export SAFE_BRANCH="main"
+      export TARGET_ENV="uat"
+      export SONAR_PROJECT_KEY="bookinfo-productpage"
+    else
+      export SAFE_BRANCH="${CI_COMMIT_REF_SLUG}"
+      export TARGET_ENV="dev"
+      export SONAR_PROJECT_KEY="bookinfo-productpage-dev"
+    fi
+    
+    export RELEASE_NAME="bookinfo-productpage-${TARGET_ENV}"
+    export NAMESPACE="bookinfo-${TARGET_ENV}"
+    export VALUES_FILE="helm-chart/productpage/${TARGET_ENV}-productpage-values.yaml"
+    export APP_URL="http://${RELEASE_NAME}.${NAMESPACE}.svc.cluster.local:9080"
+    
+    export DETAILS_HOSTNAME="http://bookinfo-details-${TARGET_ENV}:9080"
+    export RATINGS_HOSTNAME="http://bookinfo-ratings-${TARGET_ENV}:9080"
+    export REVIEWS_HOSTNAME="http://bookinfo-reviews-${TARGET_ENV}:9080"
+
+    export GIT_TAG="${CI_COMMIT_SHORT_SHA}"
+
+iac_scan_kics:
+  stage: scan
+  image: 
+    name: checkmarx/kics:latest
+    entrypoint: [""]
+  allow_failure: true
+  script:
+    - /app/bin/kics scan -p ${CHART_DIR} --fail-on high,critical --report-formats html,json -o .
+  artifacts:
+    when: always
+    paths:
+      - results.html
+      - results.json
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - when: never
+
+sast_sonar:
+  stage: scan
+  image: 
+    name: sonarsource/sonar-scanner-cli:latest
+    entrypoint: [""]
+  allow_failure: true
+  before_script:
+    - *env_logic
+  script:
+    - sonar-scanner
+      -Dsonar.projectKey=${SONAR_PROJECT_KEY}
+      -Dsonar.sources=src/productpage
+      -Dsonar.host.url=${SONAR_SERVER_URL}
+      -Dsonar.login=${SONAR_TOKEN}
+      -Dsonar.qualitygate.wait=true
+      -Dsonar.qualitygate.timeout=300
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - when: never
+
+dependency_check:
+  stage: scan
+  image: 
+    name: owasp/dependency-check:latest
+    entrypoint: [""]
+  cache:
+    key: "dep-check-data"
+    paths:
+      - /usr/share/dependency-check/data
+  allow_failure: true
+  script: 
+    - /usr/share/dependency-check/bin/dependency-check.sh \
+      --project "Bookinfo-productpage" \
+      --scan ./src/productpage/requirements.txt \
+      --scan ./src/productpage/test-requirements.txt \
+      --format HTML \
+      --format XML \
+      --out . \
+      --enableExperimental
+  artifacts:
+    when: always
+    paths:
+      - dependency-check-report.html
+      - dependency-check-report.xml
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - when: never
+
+unit_tests:
+  stage: test
+  image: python:3.9-slim
+  before_script:
+    - *env_logic
+  script: 
+    - cd src/productpage
+    - pip install -r requirements.txt
+    - pip install -r test-requirements.txt
+    - python3 -m unittest discover tests/unit
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - when: never
+
+build_push:
+  stage: build
+  image: docker:24.0.5
+  services:
+    - docker:24.0.5-dind
+  before_script:
+    - *env_logic
+    - while ! docker info > /dev/null 2>&1; do sleep 1; done
+  script:
+    - echo "$REGISTRY_PASSWORD" | docker login $REGISTRY_URL -u "$REGISTRY_USER" --password-stdin
+    - docker build -t ${FULL_IMAGE}:${GIT_TAG} ./src/productpage
+    - |
+      for i in 1 2 3; do
+        docker push ${FULL_IMAGE}:${GIT_TAG} && break || sleep 15
+      done
+    - docker logout ${REGISTRY_URL}
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - when: never
+
+scan_image_trivy:
+  stage: build
+  needs: ["build_push"]
+  image:
+    name: aquasec/trivy:latest
+    entrypoint: [""] 
+  services:
+    - docker:24.0.5-dind
+  before_script:
+    - *env_logic
+  script:
+    - trivy image --severity HIGH,CRITICAL --format template --template '@/contrib/html.tpl' -o trivy-results.html ${FULL_IMAGE}:${GIT_TAG}
+  artifacts:
+    paths:
+      - trivy-results.html
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - when: never
+
+deploy_k8s:
+  stage: deploy
+  image: 
+    name: alpine/helm:3.12.0
+    entrypoint: [""] 
+  before_script:
+    - *env_logic
+  script:
+    - chmod 600 $KUBECONFIG
+    - echo "Deploying Release ${RELEASE_NAME} to Namespace ${NAMESPACE}"
+    - helm upgrade --install ${RELEASE_NAME} ${CHART_DIR} --namespace ${NAMESPACE} -f ${VALUES_FILE} --set productpage.image.tag=${GIT_TAG} --kube-insecure-skip-tls-verify --wait
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - when: never
+
+dast_zap:
+  stage: deploy
+  needs: ["deploy_k8s"]
+  image: 
+    name: ghcr.io/zaproxy/zaproxy:stable
+    entrypoint: [""]
+  before_script:
+    - *env_logic
+  script:
+    - mkdir -p /zap/wrk
+    - cp -r . /zap/wrk/
+    - cd /zap/wrk
+    - zap-baseline.py -t ${APP_URL} -r zap-report.html --autooff -I -z "-config connection.timeoutInSecs=60"
+    - cp zap-report.html ${CI_PROJECT_DIR} || true
+    - |
+      if [ ! -f zap-report.html ]; then 
+        echo "Report not found, checking DNS..."
+        nslookup $(echo "${APP_URL}" | sed -E 's|https?://||' | cut -d: -f1)
+      fi
+  artifacts:
+    when: always
+    paths:
+      - zap-report.html
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - when: never
