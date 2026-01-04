@@ -51,6 +51,9 @@ iac_scan_kics:
     paths:
       - results.html
       - results.json
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - when: never
 
 sast_sonar:
   stage: scan
@@ -68,6 +71,9 @@ sast_sonar:
       -Dsonar.login=${SONAR_TOKEN}
       -Dsonar.qualitygate.wait=true
       -Dsonar.qualitygate.timeout=300
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - when: never
 
 dependency_check:
   stage: scan
@@ -93,6 +99,9 @@ dependency_check:
     paths:
       - dependency-check-report.html
       - dependency-check-report.xml
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - when: never
 
 unit_tests:
   stage: test
@@ -104,6 +113,9 @@ unit_tests:
     - pip install -r requirements.txt
     - pip install -r test-requirements.txt
     - python3 -m unittest discover tests/unit
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - when: never
 
 build_push:
   stage: build
@@ -121,6 +133,9 @@ build_push:
         docker push ${FULL_IMAGE}:${GIT_TAG} && break || sleep 15
       done
     - docker logout ${REGISTRY_URL}
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - when: never
 
 scan_image_trivy:
   stage: build
@@ -137,6 +152,9 @@ scan_image_trivy:
   artifacts:
     paths:
       - trivy-results.html
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - when: never
 
 deploy_k8s:
   stage: deploy
@@ -149,6 +167,9 @@ deploy_k8s:
     - chmod 600 $KUBECONFIG
     - echo "Deploying Release ${RELEASE_NAME} to Namespace ${NAMESPACE}"
     - helm upgrade --install ${RELEASE_NAME} ${CHART_DIR} --namespace ${NAMESPACE} -f ${VALUES_FILE} --set productpage.image.tag=${GIT_TAG} --kube-insecure-skip-tls-verify --wait
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - when: never
 
 dast_zap:
   stage: deploy
@@ -173,3 +194,6 @@ dast_zap:
     when: always
     paths:
       - zap-report.html
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - when: never
