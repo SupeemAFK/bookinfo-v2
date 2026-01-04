@@ -1,0 +1,18 @@
+gitlabUrl: https://gitlab.com/
+
+rbac:
+  create: true
+
+runners:
+  serviceAccountName: gitlab-deployer
+  privileged: true
+  builds:
+    cpuLimit: 1000m
+    cpuRequests: 100m
+    memoryLimit: 2Gi
+    memoryRequests: 256Mi
+  config: |
+    [[runners]]
+      [runners.kubernetes]
+        image = "alpine:latest"
+        service_account_overwrite_allowed = "gitlab-deployer"
