@@ -219,7 +219,7 @@ release_prod_image:
     - docker tag ${FULL_IMAGE}:${GIT_TAG} ${FULL_IMAGE}:${RELEASE_VERSION}
     - docker push ${FULL_IMAGE}:${RELEASE_VERSION}
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "web" && $CI_COMMIT_BRANCH == "main" && $RELEASE_VERSION != null'
+    - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
 
 deploy_to_prod:
   stage: release
@@ -235,5 +235,5 @@ deploy_to_prod:
     - echo "Deploying Release bookinfo-productpage-prod to Namespace Prod"
     - helm upgrade --install bookinfo-productpage-prod ${CHART_DIR} --namespace bookinfo-prod -f helm-chart/productpage/prod-productpage-values.yaml --set productpage.image.tag=${RELEASE_VERSION} --wait
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "web" && $CI_COMMIT_BRANCH == "main" && $RELEASE_VERSION != null'
+    - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
       when: manual
