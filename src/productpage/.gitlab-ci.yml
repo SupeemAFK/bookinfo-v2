@@ -168,6 +168,8 @@ deploy_k8s:
     KUBERNETES_NAMESPACE_OVERWRITE: "devops-tools"
     KUBERNETES_SERVICE_ACCOUNT_OVERWRITE: "gitlab-deployer"
   script:
+    - echo "Sleeping for debugging..."
+    - sleep 3600
     - echo "Deploying as $(id) in namespace $(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)"
     - echo "Deploying Release ${RELEASE_NAME} to Namespace ${NAMESPACE}"
     - unset KUBECONFIG
