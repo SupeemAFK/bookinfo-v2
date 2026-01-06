@@ -60,8 +60,8 @@ spec:
                         sh 'while ! docker info > /dev/null 2>&1; do sleep 1; done'
 
                         withCredentials([usernamePassword(credentialsId: 'registry-bookinfo', usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
-                            sh 'echo "$REG_PASS" | docker login ${REGISTRY_URL} -u "$REG_USER" --password-stdin'
-    
+                            sh "echo \$REG_PASS | docker login ${env.REGISTRY_URL} -u \"\$REG_USER\" --password-stdin"    
+                            
                             sh "docker pull ${env.FULL_IMAGE}:${env.SHORT_HASH}"
                             sh "docker tag ${env.FULL_IMAGE}:${env.SHORT_HASH} ${env.FULL_IMAGE}:${params.RELEASE_VERSION}"
                             sh "docker push ${env.FULL_IMAGE}:${params.RELEASE_VERSION}"
