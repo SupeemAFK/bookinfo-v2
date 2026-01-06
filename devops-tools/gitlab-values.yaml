@@ -15,5 +15,6 @@ runners:
     [[runners]]
       [runners.kubernetes]
         image = "alpine:latest"
+        privileged = true
         namespace_overwrite_allowed = "devops-tools"
         service_account_overwrite_allowed = "gitlab-deployer"

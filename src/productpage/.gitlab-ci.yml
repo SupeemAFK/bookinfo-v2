@@ -172,13 +172,7 @@ deploy_k8s:
     KUBERNETES_NAMESPACE_OVERWRITE: "devops-tools"
     KUBERNETES_SERVICE_ACCOUNT_OVERWRITE: "gitlab-deployer"
   script:
-    - echo "Sleeping for debugging..."
-    - sleep 3600
-    - echo "Deploying as $(id) in namespace $(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)"
     - echo "Deploying Release ${RELEASE_NAME} to Namespace ${NAMESPACE}"
-    - unset KUBECONFIG
-    - echo "Checking internal identity..."
-    - ls -l /var/run/secrets/kubernetes.io/serviceaccount/token || echo "WARNING Token still missing!"
     - helm upgrade --install ${RELEASE_NAME} ${CHART_DIR} --namespace ${NAMESPACE} -f ${VALUES_FILE} --set productpage.image.tag=${GIT_TAG} --wait
   rules:
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
