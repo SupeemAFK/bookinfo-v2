@@ -58,6 +58,7 @@ iac_scan_kics:
       - results.html
       - results.json
   rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
       when: never
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
@@ -80,6 +81,7 @@ sast_sonar:
       -Dsonar.qualitygate.wait=true
       -Dsonar.qualitygate.timeout=300
   rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
       when: never
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
@@ -111,6 +113,7 @@ dependency_check:
       - dependency-check-report.html
       - dependency-check-report.xml
   rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
       when: never
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
@@ -127,6 +130,7 @@ unit_tests:
     - pip install -r test-requirements.txt
     - python3 -m unittest discover tests/unit
   rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
       when: never
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
@@ -149,6 +153,7 @@ build_push:
       done
     - docker logout ${REGISTRY_URL}
   rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
       when: never
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
@@ -170,6 +175,7 @@ scan_image_trivy:
     paths:
       - trivy-results.html
   rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
       when: never
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
@@ -190,6 +196,7 @@ deploy_k8s:
     - echo "Deploying Release ${RELEASE_NAME} to Namespace ${NAMESPACE}"
     - helm upgrade --install ${RELEASE_NAME} ${CHART_DIR} --namespace ${NAMESPACE} -f ${VALUES_FILE} --set productpage.image.tag=${GIT_TAG} --wait
   rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
       when: never
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
@@ -219,6 +226,7 @@ dast_zap:
     paths:
       - zap-report.html
   rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
       when: never
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
@@ -226,6 +234,9 @@ dast_zap:
 
 release_prod_image:
   stage: tagging
+  image: docker:24.0.5
+  services:
+    - docker:24.0.5-dind
   before_script:
     - *env_logic
   script:
