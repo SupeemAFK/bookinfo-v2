@@ -2,6 +2,7 @@ spec:
   inputs:
     release_version:
       description: "Enter version for Prod (e.g., 1.2.0)"
+      default: "1.0.0"
     target_service:
       description: "Which service are you releasing?"
       options:
@@ -10,6 +11,7 @@ spec:
         - "ratings"
         - "reviews"
         - "none"
+      default: "none"
 
 ---
 
