@@ -23,6 +23,6 @@ trigger_productpage:
   variables:
     RELEASE_VERSION: $[[ inputs.release_version ]]
   rules:
-    - if: '$[[ inputs.target_service ]] == "productpage"'
+    - if: '"$[[ inputs.target_service ]]" == "productpage"'
   #  - changes:
   #    - src/productpage/**/*
