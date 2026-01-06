@@ -239,12 +239,14 @@ release_prod_image:
     - docker:24.0.5-dind
   before_script:
     - *env_logic
+    - while ! docker info > /dev/null 2>&1; do sleep 1; done
   script:
     - echo "Preparing release version $RELEASE_VERSION"
     - echo "$REGISTRY_PASSWORD" | docker login $REGISTRY_URL -u "$REGISTRY_USER" --password-stdin
     - docker pull ${FULL_IMAGE}:${GIT_TAG}
     - docker tag ${FULL_IMAGE}:${GIT_TAG} ${FULL_IMAGE}:${RELEASE_VERSION}
     - docker push ${FULL_IMAGE}:${RELEASE_VERSION}
+    - docker logout
   rules:
     - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
 
