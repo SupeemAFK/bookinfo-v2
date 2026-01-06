@@ -250,8 +250,11 @@ release_prod_image:
     - docker logout
     - |
       curl --request POST \
-        --header "PRIVATE-TOKEN: ${PROJECT_ACCESS_TOKEN}" \
-        "https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/repository/tags?tag_name=${RELEASE_VERSION}&ref=${CI_COMMIT_SHA}"
+      --header "PRIVATE-TOKEN: ${PROJECT_ACCESS_TOKEN}" \
+      --url "https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/repository/tags" \
+      --data "tag_name=productpage/${RELEASE_VERSION}" \
+      --data "ref=${CI_COMMIT_SHA}" \
+      --data "message=Release productpage/${RELEASE_VERSION}"
   rules:
     - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
 
