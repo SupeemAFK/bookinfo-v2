@@ -1,16 +1,30 @@
+spec:
+  inputs:
+    release_version:
+      type: string 
+      description: "Semantic version (e.g., 1.2.0)"
+      default: ""
+    target_service:
+      type: string 
+      description: "Service to release"
+      options: ["productpage", "details", "ratings", "reviews", "none"]
+      default: "none"
+
+---
+
 stages:
   - triggers
-
-variables:
-  RELEASE_VERSION:
-    value: ""
-    description: "Input version ONLY for Prod releases (e.g., v1.0.0)"
 
 trigger_productpage:
   stage: triggers
   trigger:
     include: src/productpage/.gitlab-ci.yml
     strategy: depend
-  #rules:
-  #  - changes:
-  #    - src/productpage/**/*
+  variables:
+    CHOSEN_SERVICE: $[[ inputs.target_service ]]
+    RELEASE_VERSION: $[[ inputs.release_version ]]
+  rules:
+    - if: '$CHOSEN_SERVICE == "productpage"'
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - changes:
+      - src/productpage/**/*
