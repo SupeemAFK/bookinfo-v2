@@ -83,9 +83,9 @@ kubectl annotate serviceaccount jenkins-deployer \
   iam.gke.io/gcp-service-account=jenkins-gke-deployer@[PROJECT_ID].iam.gserviceaccount.com
 ```
 
-### Apply rbac for namespaces
+### Apply cluster role bindings
 ```
-kubectl apply -f devops-tools/jenkins-rbac.yaml -n bookinfo-dev
+kubectl apply -f devops-tools/jenkins-rbac.yaml
 ```
 
 ### Checking authorization
