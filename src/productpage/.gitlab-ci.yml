@@ -170,6 +170,9 @@ deploy_k8s:
   script:
     - echo "Deploying as $(id) in namespace $(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)"
     - echo "Deploying Release ${RELEASE_NAME} to Namespace ${NAMESPACE}"
+    - unset KUBECONFIG
+    - echo "Checking internal identity..."
+    - ls -l /var/run/secrets/kubernetes.io/serviceaccount/token || echo "WARNING Token still missing!"
     - helm upgrade --install ${RELEASE_NAME} ${CHART_DIR} --namespace ${NAMESPACE} -f ${VALUES_FILE} --set productpage.image.tag=${GIT_TAG} --wait
   rules:
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
