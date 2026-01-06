@@ -1,16 +1,29 @@
+spec:
+  inputs:
+    release_version:
+      description: "Enter version for Prod (e.g., 1.2.0)"
+    target_service:
+      description: "Which service are you releasing?"
+      options:
+        - "productpage"
+        - "details"
+        - "ratings"
+        - "reviews"
+        - "none"
+
+---
+
 stages:
   - triggers
-
-variables:
-  RELEASE_VERSION:
-    value: ""
-    description: "Input version ONLY for Prod releases (e.g., v1.0.0)"
 
 trigger_productpage:
   stage: triggers
   trigger:
     include: src/productpage/.gitlab-ci.yml
     strategy: depend
-  #rules:
+  variables:
+    RELEASE_VERSION: $[[ inputs.release_version ]]
+  rules:
+    - if: '$[[ inputs.target_service ]] == "productpage"'
   #  - changes:
   #    - src/productpage/**/*
