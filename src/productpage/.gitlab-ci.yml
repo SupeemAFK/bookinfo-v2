@@ -16,8 +16,6 @@ variables:
   DOCKER_TLS_CERTDIR: ""
   DOCKER_DRIVER: overlay2
 
-  KUBE_CONTEXT: "SupeemAFK/bookinfo:my-agent"
-
 .env_logic: &env_logic
   - |
     if [ "$CI_COMMIT_REF_NAME" = "main" ]; then
@@ -166,8 +164,11 @@ deploy_k8s:
     entrypoint: [""] 
   before_script:
     - *env_logic
-    - kubectl config use-context $KUBE_CONTEXT
+  variables:
+    KUBERNETES_NAMESPACE_OVERWRITE: "devops-tools"
+    KUBERNETES_SERVICE_ACCOUNT_OVERWRITE: "gitlab-deployer"
   script:
+    - echo "Deploying as $(id) in namespace $(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)"
     - echo "Deploying Release ${RELEASE_NAME} to Namespace ${NAMESPACE}"
     - helm upgrade --install ${RELEASE_NAME} ${CHART_DIR} --namespace ${NAMESPACE} -f ${VALUES_FILE} --set productpage.image.tag=${GIT_TAG} --wait
   rules:
