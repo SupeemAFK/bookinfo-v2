@@ -1,8 +1,13 @@
 stages:
-  - productpage
+  - triggers
 
-trigger_service_a:
-  stage: productpage
+variables:
+  RELEASE_VERSION:
+    value: ""
+    description: "Input version ONLY for Prod releases (e.g., v1.0.0)"
+
+trigger_productpage:
+  stage: triggers
   trigger:
     include: src/productpage/.gitlab-ci.yml
     strategy: depend

@@ -4,7 +4,7 @@ rbac:
   create: true
 
 runners:
-  serviceAccountName: gitlab-deployer
+  serviceAccountName: gitlab-runner
   privileged: true
   builds:
     cpuLimit: 1000m
@@ -15,4 +15,6 @@ runners:
     [[runners]]
       [runners.kubernetes]
         image = "alpine:latest"
+        privileged = true
+        namespace_overwrite_allowed = "devops-tools"
         service_account_overwrite_allowed = "gitlab-deployer"
