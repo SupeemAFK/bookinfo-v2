@@ -56,18 +56,16 @@ spec:
             steps {
                 container('docker') {
                     script {
-                        // Wait for the private daemon to finish booting.
-                        sh 'while ! docker info > /dev/null 2>&1; do sleep 1; done'
-
-                        withCredentials([usernamePassword(credentialsId: 'registry-bookinfo', usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
-                            sh "echo \$REG_PASS | docker login ${env.REGISTRY_URL} -u \"\$REG_USER\" --password-stdin"    
-                            
-                            sh "docker pull ${env.FULL_IMAGE}:${env.SHORT_HASH}"
-                            sh "docker tag ${env.FULL_IMAGE}:${env.SHORT_HASH} ${env.FULL_IMAGE}:${params.RELEASE_VERSION}"
-                            sh "docker push ${env.FULL_IMAGE}:${params.RELEASE_VERSION}"
-                            
-                            sh 'docker logout ${REGISTRY_URL}'
-                        }
+                        // This will print the URL and the length of the username/password 
+                        // without leaking the actual secrets in the logs.
+                        sh """
+                            echo "Attempting login to: ${env.REGISTRY_URL}"
+                            echo "Username length: \$(echo -n \$REG_USER | wc -c)"
+                            echo "Password length: \$(echo -n \$REG_PASS | wc -c)"
+                        """
+                        
+                        // Use the explicit 'env.' prefix to ensure the URL isn't blank
+                        sh 'echo "$REG_PASS" | docker login ${env.REGISTRY_URL} -u "$REG_USER" --password-stdin'
                     }
                 }
             }
