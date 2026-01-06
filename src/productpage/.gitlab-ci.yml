@@ -247,6 +247,10 @@ release_prod_image:
     - docker tag ${FULL_IMAGE}:${GIT_TAG} ${FULL_IMAGE}:${RELEASE_VERSION}
     - docker push ${FULL_IMAGE}:${RELEASE_VERSION}
     - docker logout
+    - |
+      curl --request POST \
+        --header "PRIVATE-TOKEN: ${PROJECT_ACCESS_TOKEN}" \
+        "https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/repository/tags?tag_name=${RELEASE_VERSION}&ref=${CI_COMMIT_SHA}"
   rules:
     - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
 
