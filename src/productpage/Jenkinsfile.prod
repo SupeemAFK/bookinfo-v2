@@ -14,6 +14,13 @@ spec:
     image: alpine/helm:3.12.0
     command: ['cat']
     tty: true
+  - name: docker
+    image: docker:24.0.5
+    command: ['cat']
+    tty: true
+    env:
+    - name: DOCKER_HOST
+      value: tcp://localhost:2375
 """
         }
     }
@@ -30,6 +37,23 @@ spec:
     }
 
     stages {
+        stage('Pull Image') {
+            steps {
+                container('docker') {
+                    script {
+                        // Wait for the private daemon to finish booting.
+                        sh 'while ! docker info > /dev/null 2>&1; do sleep 1; done'
+
+                        withCredentials([usernamePassword(credentialsId: 'registry-bookinfo', usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
+                            sh 'echo $REG_PASS | docker login ${REGISTRY_URL} -u "$REG_USER" --password-stdin'
+                            sh "docker pull ${env.FULL_IMAGE}:${env.SHORT_HASH}"
+                            echo "Successfully pull ${env.FULL_IMAGE}:${env.SHORT_HASH}, Allow to deploy!"
+                        }
+                    }
+                }
+            }
+        }
+
         stage('Deploy to Production') {
             steps {
                 container('helm') {
