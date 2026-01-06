@@ -270,7 +270,7 @@ deploy_to_prod:
     KUBERNETES_SERVICE_ACCOUNT_OVERWRITE: "gitlab-deployer"
   script:
     - echo "Deploying Release bookinfo-productpage-prod to Namespace Prod"
-    - helm upgrade --install bookinfo-productpage-prod ${CHART_DIR} --namespace bookinfo-prod -f helm-chart/productpage/prod-productpage-values.yaml --set productpage.image.tag=${RELEASE_VERSION} --wait
+    - helm upgrade --install bookinfo-productpage ${CHART_DIR} --namespace bookinfo-prod -f helm-chart/productpage/prod-productpage-values.yaml --set productpage.image.tag=${RELEASE_VERSION} --wait
   rules:
     - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
       when: manual
