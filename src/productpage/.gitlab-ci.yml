@@ -16,6 +16,8 @@ variables:
   DOCKER_TLS_CERTDIR: ""
   DOCKER_DRIVER: overlay2
 
+  KUBE_CONTEXT: "SupeemAFK/bookinfo:my-agent"
+
 .env_logic: &env_logic
   - |
     if [ "$CI_COMMIT_REF_NAME" = "main" ]; then
@@ -160,14 +162,14 @@ scan_image_trivy:
 deploy_k8s:
   stage: deploy
   image: 
-    name: alpine/helm:3.12.0
+    name: alpine/helm:3.14.0
     entrypoint: [""] 
   before_script:
     - *env_logic
+    - kubectl config use-context $KUBE_CONTEXT
   script:
-    - chmod 600 $KUBECONFIG
     - echo "Deploying Release ${RELEASE_NAME} to Namespace ${NAMESPACE}"
-    - helm upgrade --install ${RELEASE_NAME} ${CHART_DIR} --namespace ${NAMESPACE} -f ${VALUES_FILE} --set productpage.image.tag=${GIT_TAG} --kube-insecure-skip-tls-verify --wait
+    - helm upgrade --install ${RELEASE_NAME} ${CHART_DIR} --namespace ${NAMESPACE} -f ${VALUES_FILE} --set productpage.image.tag=${GIT_TAG} --wait
   rules:
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
     - when: never
@@ -199,14 +201,14 @@ dast_zap:
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
     - when: never
 
-deploy_to_prod:
-  stage: release
-  before_script:
-    - *env_logic
-  script:
-    - chmod 600 $KUBECONFIG
-    - echo "Deploying Release ${RELEASE_NAME} to Namespace ${NAMESPACE}"
-    - helm upgrade --install ${RELEASE_NAME} ${CHART_DIR} --namespace ${NAMESPACE} -f ${VALUES_FILE} --set productpage.image.tag=${GIT_TAG} --kube-insecure-skip-tls-verify --wait
-  rules:
-    - if: '$CI_COMMIT_TAG =~ /^v?\d+\.\d+\.\d+$/' # Only runs on tags that look like versions (e.g., v1.0, 2.0.1)
-      when: manual
+#deploy_to_prod:
+#  stage: release
+#  before_script:
+#    - *env_logic
+#  script:
+#    - chmod 600 $KUBECONFIG
+#    - echo "Deploying Release ${RELEASE_NAME} to Namespace ${NAMESPACE}"
+#    - helm upgrade --install ${RELEASE_NAME} ${CHART_DIR} --namespace ${NAMESPACE} -f ${VALUES_FILE} --set productpage.image.tag=${GIT_TAG} --kube-insecure-skip-tls-verify --wait
+#  rules:
+#    - if: '$CI_COMMIT_TAG =~ /^v?\d+\.\d+\.\d+$/' # Only runs on tags that look like versions (e.g., v1.0, 2.0.1)
+#      when: manual
