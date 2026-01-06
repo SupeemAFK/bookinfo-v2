@@ -25,5 +25,6 @@ trigger_productpage:
     RELEASE_VERSION: $[[ inputs.release_version ]]
   rules:
     - if: '$CHOSEN_SERVICE == "productpage"'
-  #  - changes:
-  #    - src/productpage/**/*
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - changes:
+      - src/productpage/**/*
