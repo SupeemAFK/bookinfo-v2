@@ -1,8 +1,14 @@
+default:
+  tags:
+    - k8s-runner
+
 stages:
   - scan
   - test
   - build
   - deploy
+  - tagging
+  - release
 
 variables:
   REGISTRY_URL: "registry-supeem.opsta.in.th"
@@ -83,10 +89,11 @@ dependency_check:
   cache:
     key: "dep-check-data"
     paths:
-      - /usr/share/dependency-check/data
+      - odc-data/
   allow_failure: true
   script: 
     - /usr/share/dependency-check/bin/dependency-check.sh \
+      --data "${CI_PROJECT_DIR}/odc-data" \
       --project "Bookinfo-productpage" \
       --scan ./src/productpage/requirements.txt \
       --scan ./src/productpage/test-requirements.txt \
@@ -159,14 +166,17 @@ scan_image_trivy:
 deploy_k8s:
   stage: deploy
   image: 
-    name: alpine/helm:3.12.0
+    name: alpine/helm:3.14.0
     entrypoint: [""] 
   before_script:
     - *env_logic
+    - unset KUBECONFIG # Forces it to use the Service Account (gitlab-deployer)
+  variables:
+    KUBERNETES_NAMESPACE_OVERWRITE: "devops-tools"
+    KUBERNETES_SERVICE_ACCOUNT_OVERWRITE: "gitlab-deployer"
   script:
-    - chmod 600 $KUBECONFIG
     - echo "Deploying Release ${RELEASE_NAME} to Namespace ${NAMESPACE}"
-    - helm upgrade --install ${RELEASE_NAME} ${CHART_DIR} --namespace ${NAMESPACE} -f ${VALUES_FILE} --set productpage.image.tag=${GIT_TAG} --kube-insecure-skip-tls-verify --wait
+    - helm upgrade --install ${RELEASE_NAME} ${CHART_DIR} --namespace ${NAMESPACE} -f ${VALUES_FILE} --set productpage.image.tag=${GIT_TAG} --wait
   rules:
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
     - when: never
@@ -197,3 +207,33 @@ dast_zap:
   rules:
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
     - when: never
+
+release_prod_image:
+  stage: tagging
+  before_script:
+    - *env_logic
+  script:
+    - echo "Preparing release version $RELEASE_VERSION"
+    - echo "$REGISTRY_PASSWORD" | docker login $REGISTRY_URL -u "$REGISTRY_USER" --password-stdin
+    - docker pull ${FULL_IMAGE}:${GIT_TAG}
+    - docker tag ${FULL_IMAGE}:${GIT_TAG} ${FULL_IMAGE}:${RELEASE_VERSION}
+    - docker push ${FULL_IMAGE}:${RELEASE_VERSION}
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "web" && $CI_COMMIT_BRANCH == "main" && $RELEASE_VERSION != null'
+
+deploy_to_prod:
+  stage: release
+  image: 
+    name: alpine/helm:3.14.0
+    entrypoint: [""] 
+  before_script:
+    - unset KUBECONFIG # Forces it to use the Service Account (gitlab-deployer)
+  variables:
+    KUBERNETES_NAMESPACE_OVERWRITE: "devops-tools"
+    KUBERNETES_SERVICE_ACCOUNT_OVERWRITE: "gitlab-deployer"
+  script:
+    - echo "Deploying Release bookinfo-productpage-prod to Namespace Prod"
+    - helm upgrade --install bookinfo-productpage-prod ${CHART_DIR} --namespace bookinfo-prod -f helm-chart/productpage/prod-productpage-values.yaml --set productpage.image.tag=${RELEASE_VERSION} --wait
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "web" && $CI_COMMIT_BRANCH == "main" && $RELEASE_VERSION != null'
+      when: manual
