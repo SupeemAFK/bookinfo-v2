@@ -1,16 +1,13 @@
 spec:
   inputs:
     release_version:
-      description: "Enter version for Prod (e.g., 1.2.0)"
-      default: "1.0.0"
+      type: string 
+      description: "Semantic version (e.g., 1.2.0)"
+      default: ""
     target_service:
-      description: "Which service are you releasing?"
-      options:
-        - "productpage"
-        - "details"
-        - "ratings"
-        - "reviews"
-        - "none"
+      type: string 
+      description: "Service to release"
+      options: ["productpage", "details", "ratings", "reviews", "none"]
       default: "none"
 
 ---
