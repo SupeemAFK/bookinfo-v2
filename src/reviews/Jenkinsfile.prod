@@ -14,6 +14,21 @@ spec:
     image: alpine/helm:3.12.0
     command: ['cat']
     tty: true
+  - name: docker
+    image: docker:24.0.5
+    command: ['cat']
+    tty: true
+    env:
+    - name: DOCKER_HOST
+      value: tcp://localhost:2375
+  - name: dind
+    image: docker:24.0.5-dind
+    command: ["dockerd", "--host=unix:///var/run/docker.sock", "--host=tcp://0.0.0.0:2375", "--storage-driver=overlay2"]
+    securityContext:
+      privileged: true
+    env:
+    - name: DOCKER_TLS_CERTDIR
+      value: ""
 """
         }
     }
@@ -23,13 +38,58 @@ spec:
     }
 
     environment {
+        REGISTRY_URL = "registry-supeem.opsta.in.th"
+        IMAGE_PATH   = "library/reviews-service"
+        FULL_IMAGE   = "${REGISTRY_URL}/${IMAGE_PATH}"
+
         RELEASE_NAME = "bookinfo-reviews"
         NAMESPACE    = "bookinfo-prod"
         CHART_DIR    = "helm-chart/reviews"
         VALUES_FILE  = "helm-chart/reviews/prod-reviews-values.yaml"
+
+        GIT_REPO     = "git@gitlab.com:SupeemAFK/bookinfo.git"
+        GIT_CREDS    = "bookinfo-deploy-key"
     }
 
     stages {
+        stage('Checkout Main') {
+            steps {
+                script {
+                    withEnv(['GIT_SSH_COMMAND=ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no']) {
+                        checkout([$class: 'GitSCM',
+                            branches: [[name: "*/main"]], 
+                            userRemoteConfigs: [[
+                                credentialsId: env.GIT_CREDS,
+                                url: env.GIT_REPO
+                            ]]
+                        ])
+                    }
+                    
+                    env.SHORT_HASH = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+                    echo "Promoting Artifact from Commit: ${env.SHORT_HASH}"
+                }
+            }
+        }
+
+        stage('Pull Image') {
+            steps {
+                container('docker') {
+                    script {
+                        // Wait for the private daemon to finish booting.
+                        sh 'while ! docker info > /dev/null 2>&1; do sleep 1; done'
+
+                        withCredentials([usernamePassword(credentialsId: 'registry-bookinfo', usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
+                            sh 'echo "$REG_PASS" | docker login ${REGISTRY_URL} -u "$REG_USER" --password-stdin'
+    
+                            sh "docker pull ${env.FULL_IMAGE}:${params.DEPLOY_VERSION}"
+
+                            echo "Successfully pull ${env.FULL_IMAGE}:${params.DEPLOY_VERSION}, Allow to deploy!"
+                        }
+                    }
+                }
+            }
+        }
+
         stage('Deploy to Production') {
             steps {
                 container('helm') {
