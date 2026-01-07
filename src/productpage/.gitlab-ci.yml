@@ -239,12 +239,22 @@ release_prod_image:
     - docker:24.0.5-dind
   before_script:
     - *env_logic
+    - while ! docker info > /dev/null 2>&1; do sleep 1; done
+    - apk add --no-cache curl
   script:
     - echo "Preparing release version $RELEASE_VERSION"
     - echo "$REGISTRY_PASSWORD" | docker login $REGISTRY_URL -u "$REGISTRY_USER" --password-stdin
     - docker pull ${FULL_IMAGE}:${GIT_TAG}
     - docker tag ${FULL_IMAGE}:${GIT_TAG} ${FULL_IMAGE}:${RELEASE_VERSION}
     - docker push ${FULL_IMAGE}:${RELEASE_VERSION}
+    - docker logout
+    - |
+      curl --request POST \
+      --header "PRIVATE-TOKEN: ${PROJECT_ACCESS_TOKEN}" \
+      --url "https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/repository/tags" \
+      --data "tag_name=productpage/${RELEASE_VERSION}" \
+      --data "ref=${CI_COMMIT_SHA}" \
+      --data "message=Release productpage/${RELEASE_VERSION}"
   rules:
     - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
 
@@ -260,7 +270,7 @@ deploy_to_prod:
     KUBERNETES_SERVICE_ACCOUNT_OVERWRITE: "gitlab-deployer"
   script:
     - echo "Deploying Release bookinfo-productpage-prod to Namespace Prod"
-    - helm upgrade --install bookinfo-productpage-prod ${CHART_DIR} --namespace bookinfo-prod -f helm-chart/productpage/prod-productpage-values.yaml --set productpage.image.tag=${RELEASE_VERSION} --wait
+    - helm upgrade --install bookinfo-productpage ${CHART_DIR} --namespace bookinfo-prod -f helm-chart/productpage/prod-productpage-values.yaml --set productpage.image.tag=${RELEASE_VERSION} --wait
   rules:
     - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
       when: manual
