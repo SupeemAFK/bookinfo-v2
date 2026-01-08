@@ -63,7 +63,6 @@ iac_scan_kics:
 
     - if: '$CI_PIPELINE_SOURCE == "parent_pipeline"'
 
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
     - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
     - when: never
@@ -85,10 +84,13 @@ sast_sonar:
       -Dsonar.qualitygate.wait=true
       -Dsonar.qualitygate.timeout=300
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
       when: never
+
+    - if: '$CI_PIPELINE_SOURCE == "parent_pipeline"'
+
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
     - when: never
 
 dependency_check:
@@ -116,10 +118,13 @@ dependency_check:
       - odc-reports/dependency-check-report.html
       - odc-reports/dependency-check-report.xml
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
       when: never
+
+    - if: '$CI_PIPELINE_SOURCE == "parent_pipeline"'
+
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
     - when: never
 
 unit_tests:
@@ -133,10 +138,13 @@ unit_tests:
     - pip install -r test-requirements.txt
     - python3 -m unittest discover tests/unit
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
       when: never
+
+    - if: '$CI_PIPELINE_SOURCE == "parent_pipeline"'
+
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
     - when: never
 
 build_push:
@@ -156,10 +164,13 @@ build_push:
       done
     - docker logout ${REGISTRY_URL}
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
       when: never
+
+    - if: '$CI_PIPELINE_SOURCE == "parent_pipeline"'
+
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
     - when: never
 
 scan_image_trivy:
@@ -178,10 +189,13 @@ scan_image_trivy:
     paths:
       - trivy-results.html
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
       when: never
+
+    - if: '$CI_PIPELINE_SOURCE == "parent_pipeline"'
+
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
     - when: never
 
 deploy_k8s:
@@ -199,10 +213,13 @@ deploy_k8s:
     - echo "Deploying Release ${RELEASE_NAME} to Namespace ${NAMESPACE}"
     - helm upgrade --install ${RELEASE_NAME} ${CHART_DIR} --namespace ${NAMESPACE} -f ${VALUES_FILE} --set productpage.image.tag=${GIT_TAG} --wait
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
       when: never
+
+    - if: '$CI_PIPELINE_SOURCE == "parent_pipeline"'
+
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
     - when: never
 
 dast_zap:
@@ -229,10 +246,13 @@ dast_zap:
     paths:
       - zap-report.html
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
       when: never
+
+    - if: '$CI_PIPELINE_SOURCE == "parent_pipeline"'
+
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
     - when: never
 
 release_prod_image:
