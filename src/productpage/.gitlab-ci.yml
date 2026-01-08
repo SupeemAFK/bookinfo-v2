@@ -98,17 +98,19 @@ dependency_check:
       - odc-data/
     policy: pull-push
   allow_failure: true
-  script: 
+  script:
     - mkdir -p ./odc-reports
     - chmod 777 ./odc-reports
-    - /usr/share/dependency-check/bin/dependency-check.sh \
+
+    - |
+      /usr/share/dependency-check/bin/dependency-check.sh \
       --data "${CI_PROJECT_DIR}/odc-data" \
       --project "Bookinfo-productpage" \
       --scan ./src/productpage/requirements.txt \
       --scan ./src/productpage/test-requirements.txt \
       --format HTML \
       --format XML \
-      --out . \
+      --out ./odc-reports \
       --enableExperimental
   artifacts:
     when: always
