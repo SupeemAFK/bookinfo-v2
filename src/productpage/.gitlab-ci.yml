@@ -92,23 +92,13 @@ dependency_check:
   image: 
     name: owasp/dependency-check:latest
     entrypoint: [""]
-  cache:
-    key: "odc-nvd-data"
-    paths:
-      - odc-data/
-    policy: pull-push
-    when: always
   allow_failure: true
   script:
     - mkdir -p ./odc-reports
-    - mkdir -p ./odc-data
-
-    - chmod -R 777 ./odc-data
     - chmod 777 ./odc-reports
-
     - |
       /usr/share/dependency-check/bin/dependency-check.sh \
-      --data "${CI_PROJECT_DIR}/odc-data" \
+      --data "/var/lib/odc-data" \
       --project "Bookinfo-productpage" \
       --scan ./src/productpage/requirements.txt \
       --scan ./src/productpage/test-requirements.txt \
