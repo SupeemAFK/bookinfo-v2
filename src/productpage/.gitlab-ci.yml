@@ -93,11 +93,14 @@ dependency_check:
     name: owasp/dependency-check:latest
     entrypoint: [""]
   cache:
-    key: "dep-check-data"
+    key: "odc-nvd-data"
     paths:
       - odc-data/
+    policy: pull-push
   allow_failure: true
   script: 
+    - mkdir -p ./odc-reports
+    - chmod 777 ./odc-reports
     - /usr/share/dependency-check/bin/dependency-check.sh \
       --data "${CI_PROJECT_DIR}/odc-data" \
       --project "Bookinfo-productpage" \
@@ -107,12 +110,11 @@ dependency_check:
       --format XML \
       --out . \
       --enableExperimental
-    - ls -a
   artifacts:
     when: always
     paths:
-      - dependency-check-report.html
-      - dependency-check-report.xml
+      - odc-reports/dependency-check-report.html
+      - odc-reports/dependency-check-report.xml
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
