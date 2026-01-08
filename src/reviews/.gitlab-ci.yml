@@ -35,7 +35,7 @@ variables:
     export RELEASE_NAME="bookinfo-reviews-${TARGET_ENV}"
     export NAMESPACE="bookinfo-${TARGET_ENV}"
     export VALUES_FILE="helm-chart/reviews/${TARGET_ENV}-reviews-values.yaml"
-    export APP_URL="http://${RELEASE_NAME}.${NAMESPACE}.svc.cluster.local:9080/reviews/0"
+    export APP_URL="http://bookinfo-productpage-${TARGET_ENV}.${NAMESPACE}.svc.cluster.local:9080/api/v1/products/0/reviews"
 
     export GIT_TAG="${CI_COMMIT_SHORT_SHA}"
 
@@ -94,6 +94,7 @@ dependency_check:
     name: owasp/dependency-check:latest
     entrypoint: [""]
   allow_failure: true
+  needs: ["sast_sonar"]
   script:
     - mkdir -p ./odc-reports
     - chmod 777 ./odc-reports

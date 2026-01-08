@@ -128,7 +128,7 @@ unit_tests:
   before_script:
     - *env_logic
   script: 
-    - cd src/raints
+    - cd src/ratings
     - npm install
     - npm run test
   rules:
