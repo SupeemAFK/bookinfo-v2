@@ -250,7 +250,7 @@ spec:
                         
                         echo "--- Checking Service Availability ---"
                         # Ensure we check the full API path where the app listens
-                        URL="http://bookinfo-reviews-dev.bookinfo-dev.svc.cluster.local:9080/reviews"
+                        URL="http://bookinfo-reviews-dev.bookinfo-dev.svc.cluster.local:9080"
                         
                         i=0
                         MAX_RETRIES=30
