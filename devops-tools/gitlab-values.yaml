@@ -18,3 +18,13 @@ runners:
         privileged = true
         namespace_overwrite_allowed = "devops-tools"
         service_account_overwrite_allowed = "gitlab-deployer"
+        [runners.kubernetes.pod_security_context]
+          run_as_non_root = false
+          run_as_user = 0
+          run_as_group = 0
+          fs_group = 0
+        [[runners.kubernetes.volumes.host_path]]
+          name = "odc-cache"
+          mount_path = "/var/lib/odc-data"    
+          host_path = "/tmp/dependency-check-data"
+          read_only = false

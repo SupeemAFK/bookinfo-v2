@@ -85,7 +85,7 @@ spec:
         SONAR_SERVER_URL = "https://sast-supeem.opsta.in.th"
         SONAR_PROJECT_KEY = "${env.SAFE_BRANCH == 'main' ?  'bookinfo-ratings' : 'bookinfo-ratings-dev'}"
 
-        APP_URL      = "http://${RELEASE_NAME}.${NAMESPACE}.svc.cluster.local:9080"
+        APP_URL      = "http://${RELEASE_NAME}.${NAMESPACE}.svc.cluster.local:9080/ratings/0"
     }
 
     stages {
@@ -157,6 +157,7 @@ spec:
                         --scan ./src/ratings/package.json \
                         --format HTML \
                         --format XML \
+                        --enableExperimental \
                         --out .
                     '''
                 }

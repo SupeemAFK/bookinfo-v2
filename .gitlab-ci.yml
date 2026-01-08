@@ -25,9 +25,73 @@ trigger_productpage:
     RELEASE_VERSION: $[[ inputs.release_version ]]
   rules:
     - if: '$CHOSEN_SERVICE == "productpage"'
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
+      changes:
+        - src/productpage/**/*
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       changes:
         - src/productpage/**/*
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
       changes:
         - src/productpage/**/*
+
+trigger_details:
+  stage: triggers
+  trigger:
+    include: src/details/.gitlab-ci.yml
+    strategy: depend
+  variables:
+    CHOSEN_SERVICE: $[[ inputs.target_service ]]
+    RELEASE_VERSION: $[[ inputs.release_version ]]
+  rules:
+    - if: '$CHOSEN_SERVICE == "details"'
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
+      changes:
+        - src/details/**/*
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - src/details/**/*
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+      changes:
+        - src/details/**/*
+
+
+trigger_ratings:
+  stage: triggers
+  trigger:
+    include: src/ratings/.gitlab-ci.yml
+    strategy: depend
+  variables:
+    CHOSEN_SERVICE: $[[ inputs.target_service ]]
+    RELEASE_VERSION: $[[ inputs.release_version ]]
+  rules:
+    - if: '$CHOSEN_SERVICE == "ratings"'
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
+      changes:
+        - src/ratings/**/*
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - src/ratings/**/*
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+      changes:
+        - src/ratings/**/*
+
+trigger_reviews:
+  stage: triggers
+  trigger:
+    include: src/reviews/.gitlab-ci.yml
+    strategy: depend
+  variables:
+    CHOSEN_SERVICE: $[[ inputs.target_service ]]
+    RELEASE_VERSION: $[[ inputs.release_version ]]
+  rules:
+    - if: '$CHOSEN_SERVICE == "reviews"'
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
+      changes:
+        - src/reviews/**/*
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - src/reviews/**/*
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+      changes:
+        - src/reviews/**/*
