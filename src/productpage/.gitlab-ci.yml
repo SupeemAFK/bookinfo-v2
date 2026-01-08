@@ -36,7 +36,7 @@ variables:
     export RELEASE_NAME="bookinfo-productpage-${TARGET_ENV}"
     export NAMESPACE="bookinfo-${TARGET_ENV}"
     export VALUES_FILE="helm-chart/productpage/${TARGET_ENV}-productpage-values.yaml"
-    export APP_URL="http://${RELEASE_NAME}.${NAMESPACE}.svc.cluster.local:9080"
+    export APP_URL="http://${RELEASE_NAME}.${NAMESPACE}.svc.cluster.local:9080/productpage"
     
     export DETAILS_HOSTNAME="http://bookinfo-details-${TARGET_ENV}:9080"
     export RATINGS_HOSTNAME="http://bookinfo-ratings-${TARGET_ENV}:9080"
@@ -62,6 +62,7 @@ iac_scan_kics:
     - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
       when: never
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
     - when: never
 
 sast_sonar:
