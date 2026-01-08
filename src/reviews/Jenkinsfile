@@ -81,7 +81,7 @@ spec:
         SONAR_SERVER_URL = "https://sast-supeem.opsta.in.th"
         SONAR_PROJECT_KEY = "${env.SAFE_BRANCH == 'main' ?  'bookinfo-reviews' : 'bookinfo-reviews-dev'}"
 
-        APP_URL      = "http://${RELEASE_NAME}.${NAMESPACE}.svc.cluster.local:9080"
+        APP_URL      = "http://bookinfo-productpage-${SAFE_BRANCH == 'main' ? 'uat' : 'dev'}.${NAMESPACE}.svc.cluster.local:9080/api/v1/products/0/ratings"
     }
 
     stages {
@@ -244,43 +244,9 @@ spec:
             steps {
                 container('zap') {
                     script {
-                        // 1. Wait for the Service to actually be Ready (Fixes the Race Condition)
-                        sh '''
-                        set +e  # Do not crash if command fails
-                        
-                        echo "--- Checking Service Availability ---"
-                        # Ensure we check the full API path where the app listens
-                        URL="http://bookinfo-reviews-dev.bookinfo-dev.svc.cluster.local:9080"
-                        
-                        i=0
-                        MAX_RETRIES=30
-                        
-                        # POSIX-compliant loop (works in all shells)
-                        while [ $i -lt $MAX_RETRIES ]; do
-                            i=$((i+1))
-                            
-                            # Try to connect. If connection refused (exit 7), echo 000 to keep script alive
-                            STATUS=$(curl -s -o /dev/null -w "%{http_code}" $URL || echo "000")
-                            
-                            if [ "$STATUS" = "200" ]; then
-                                echo "SUCCESS: Service is UP (HTTP 200). Ready to scan."
-                                exit 0 # Exit this sh block successfully
-                            fi
-                            
-                            echo "Attempt $i/$MAX_RETRIES: Service returned HTTP $STATUS. Retrying in 5s..."
-                            sleep 5
-                        done
-
-                        # If we get here, we timed out
-                        echo "ERROR: Service failed to start after $MAX_RETRIES attempts."
-                        exit 1
-                        '''
-
-                        // 2. Prepare ZAP Environment
                         sh "chmod 777 ."
                         sh "ln -s \$(pwd) /zap/wrk"
 
-                        // 3. Run ZAP (Now guaranteed to have an open connection)
                         sh """
                             zap-baseline.py -t ${env.APP_URL} \
                             -r zap-report.html \
@@ -289,7 +255,6 @@ spec:
                             -z "-config connection.timeoutInSecs=60"
                         """
 
-                        // 4. Handle Report
                         if (fileExists('zap-report.html')) {
                             sh "mkdir -p zap-out && cp zap-report.html zap-out/index.html && chmod -R 755 zap-out"
                         } 
@@ -310,7 +275,7 @@ spec:
                                 alwaysLinkToLastBuild: true,
                                 keepAll: true,
                                 reportDir: 'zap-out',
-                                reportFiles: 'index.html',                                
+                                reportFiles: 'index.html',
                                 reportName: 'OWASP-ZAP-DAST'
                             ])
                         }
