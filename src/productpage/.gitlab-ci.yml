@@ -97,9 +97,13 @@ dependency_check:
     paths:
       - odc-data/
     policy: pull-push
+    when: always
   allow_failure: true
   script:
     - mkdir -p ./odc-reports
+    - mkdir -p ./odc-data
+
+    - chmod -R 777 ./odc-data
     - chmod 777 ./odc-reports
 
     - |
