@@ -71,9 +71,10 @@ sast_sonar:
   before_script:
     - *env_logic
   script:
-    - sonar-scanner
+    sonar-scanner
       -Dsonar.projectKey=${SONAR_PROJECT_KEY}
-      -Dsonar.sources=src/reviews
+      -Dsonar.sources=src/reviews/src/main/java
+      -Dsonar.java.binaries=src/reviews/bin/main
       -Dsonar.host.url=${SONAR_SERVER_URL}
       -Dsonar.login=${SONAR_TOKEN}
       -Dsonar.qualitygate.wait=true
@@ -94,7 +95,6 @@ dependency_check:
     name: owasp/dependency-check:latest
     entrypoint: [""]
   allow_failure: true
-  needs: ["sast_sonar"]
   script:
     - mkdir -p ./odc-reports
     - chmod 777 ./odc-reports
