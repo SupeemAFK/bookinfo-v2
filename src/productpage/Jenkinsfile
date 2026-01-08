@@ -164,6 +164,7 @@ spec:
                         --scan ./src/productpage/test-requirements.txt \
                         --format HTML \
                         --format XML \
+                        --enableExperimental \
                         --out .
                     '''
                 }

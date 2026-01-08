@@ -157,6 +157,7 @@ spec:
                         --scan ./src/ratings/package.json \
                         --format HTML \
                         --format XML \
+                        --enableExperimental \
                         --out .
                     '''
                 }

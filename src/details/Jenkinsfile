@@ -153,6 +153,7 @@ spec:
                         --scan ./src/details/Gemfile \
                         --format HTML \
                         --format XML \
+                        --enableExperimental \
                         --out .
                     '''
                 }
