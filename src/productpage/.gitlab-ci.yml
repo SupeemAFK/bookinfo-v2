@@ -110,8 +110,7 @@ dependency_check:
       --scan ./src/productpage/test-requirements.txt \
       --format HTML \
       --format XML \
-      --out ./odc-reports \
-      --enableExperimental
+      --out ./odc-reports
   artifacts:
     when: always
     paths:
