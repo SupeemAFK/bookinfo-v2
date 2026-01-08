@@ -107,6 +107,7 @@ dependency_check:
       --format XML \
       --out . \
       --enableExperimental
+    - ls -a
   artifacts:
     when: always
     paths:
