@@ -36,7 +36,7 @@ variables:
     export RELEASE_NAME="bookinfo-productpage-${TARGET_ENV}"
     export NAMESPACE="bookinfo-${TARGET_ENV}"
     export VALUES_FILE="helm-chart/productpage/${TARGET_ENV}-productpage-values.yaml"
-    export APP_URL="http://${RELEASE_NAME}.${NAMESPACE}.svc.cluster.local:9080"
+    export APP_URL="http://${RELEASE_NAME}.${NAMESPACE}.svc.cluster.local:9080/productpage"
     
     export DETAILS_HOSTNAME="http://bookinfo-details-${TARGET_ENV}:9080"
     export RATINGS_HOSTNAME="http://bookinfo-ratings-${TARGET_ENV}:9080"
@@ -58,10 +58,14 @@ iac_scan_kics:
       - results.html
       - results.json
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
       when: never
+
+    - if: '$CI_PIPELINE_SOURCE == "parent_pipeline"'
+
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
     - when: never
 
 sast_sonar:
@@ -92,26 +96,25 @@ dependency_check:
   image: 
     name: owasp/dependency-check:latest
     entrypoint: [""]
-  cache:
-    key: "dep-check-data"
-    paths:
-      - odc-data/
   allow_failure: true
-  script: 
-    - /usr/share/dependency-check/bin/dependency-check.sh \
-      --data "${CI_PROJECT_DIR}/odc-data" \
+  script:
+    - mkdir -p ./odc-reports
+    - chmod 777 ./odc-reports
+    - |
+      /usr/share/dependency-check/bin/dependency-check.sh \
+      --data "/var/lib/odc-data" \
       --project "Bookinfo-productpage" \
       --scan ./src/productpage/requirements.txt \
       --scan ./src/productpage/test-requirements.txt \
       --format HTML \
       --format XML \
-      --out . \
-      --enableExperimental
+      --enableExperimental \
+      --out ./odc-reports
   artifacts:
     when: always
     paths:
-      - dependency-check-report.html
-      - dependency-check-report.xml
+      - odc-reports/dependency-check-report.html
+      - odc-reports/dependency-check-report.xml
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'

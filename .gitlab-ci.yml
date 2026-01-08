@@ -25,6 +25,9 @@ trigger_productpage:
     RELEASE_VERSION: $[[ inputs.release_version ]]
   rules:
     - if: '$CHOSEN_SERVICE == "productpage"'
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
+      changes:
+        - src/productpage/**/*
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       changes:
         - src/productpage/**/*

@@ -86,7 +86,7 @@ spec:
         SONAR_SERVER_URL = "https://sast-supeem.opsta.in.th"
         SONAR_PROJECT_KEY = "${env.SAFE_BRANCH == 'main' ?  'bookinfo-productpage' : 'bookinfo-productpage-dev'}"
 
-        APP_URL      = "http://${RELEASE_NAME}.${NAMESPACE}.svc.cluster.local:9080"
+        APP_URL      = "http://${RELEASE_NAME}.${NAMESPACE}.svc.cluster.local:9080/productpage"
 
         //For Productpage test
         DETAILS_HOSTNAME = "http://bookinfo-details-${SAFE_BRANCH == 'main' ? 'uat' : 'dev'}:9080"
@@ -164,6 +164,7 @@ spec:
                         --scan ./src/productpage/test-requirements.txt \
                         --format HTML \
                         --format XML \
+                        --enableExperimental \
                         --out .
                     '''
                 }
