@@ -1,0 +1,285 @@
+default:
+  tags:
+    - k8s-runner
+
+stages:
+  - scan
+  - test
+  - build
+  - deploy
+  - tagging
+  - release
+
+variables:
+  REGISTRY_URL: "registry-supeem.opsta.in.th"
+  IMAGE_PATH: "library/ratings-service"
+  FULL_IMAGE: "$REGISTRY_URL/$IMAGE_PATH"
+  CHART_DIR: "helm-chart/ratings"
+  SONAR_SERVER_URL: "https://sast-supeem.opsta.in.th"
+  
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_TLS_CERTDIR: ""
+  DOCKER_DRIVER: overlay2
+
+.env_logic: &env_logic
+  - |
+    if [ "$CI_COMMIT_REF_NAME" = "main" ]; then
+      export SAFE_BRANCH="main"
+      export TARGET_ENV="uat"
+      export SONAR_PROJECT_KEY="bookinfo-ratings"
+    else
+      export SAFE_BRANCH="${CI_COMMIT_REF_SLUG}"
+      export TARGET_ENV="dev"
+      export SONAR_PROJECT_KEY="bookinfo-ratings-dev"
+    fi
+    
+    export RELEASE_NAME="bookinfo-ratings-${TARGET_ENV}"
+    export NAMESPACE="bookinfo-${TARGET_ENV}"
+    export VALUES_FILE="helm-chart/ratings/${TARGET_ENV}-ratings-values.yaml"
+    export APP_URL="http://${RELEASE_NAME}.${NAMESPACE}.svc.cluster.local:9080/ratings/0"
+
+    export GIT_TAG="${CI_COMMIT_SHORT_SHA}"
+
+iac_scan_kics:
+  stage: scan
+  image: 
+    name: checkmarx/kics:latest
+    entrypoint: [""]
+  allow_failure: true
+  script:
+    - /app/bin/kics scan -p ${CHART_DIR} --fail-on high,critical --report-formats html,json -o .
+  artifacts:
+    when: always
+    paths:
+      - results.html
+      - results.json
+  rules:
+    - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
+      when: never
+
+    - if: '$CI_PIPELINE_SOURCE == "parent_pipeline"'
+
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
+    - when: never
+
+sast_sonar:
+  stage: scan
+  image: 
+    name: sonarsource/sonar-scanner-cli:latest
+    entrypoint: [""]
+  allow_failure: true
+  before_script:
+    - *env_logic
+  script:
+    - sonar-scanner
+      -Dsonar.projectKey=${SONAR_PROJECT_KEY}
+      -Dsonar.sources=src/ratings
+      -Dsonar.host.url=${SONAR_SERVER_URL}
+      -Dsonar.login=${SONAR_TOKEN}
+      -Dsonar.qualitygate.wait=true
+      -Dsonar.qualitygate.timeout=300
+  rules:
+    - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
+      when: never
+
+    - if: '$CI_PIPELINE_SOURCE == "parent_pipeline"'
+
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
+    - when: never
+
+dependency_check:
+  stage: scan
+  image: 
+    name: owasp/dependency-check:latest
+    entrypoint: [""]
+  allow_failure: true
+  script:
+    - mkdir -p ./odc-reports
+    - chmod 777 ./odc-reports
+    - |
+      /usr/share/dependency-check/bin/dependency-check.sh \
+      --data "/var/lib/odc-data" \
+      --project "Bookinfo-ratings" \
+      --scan ./src/ratings/package.json \
+      --format HTML \
+      --format XML \
+      --enableExperimental \
+      --out ./odc-reports
+  artifacts:
+    when: always
+    paths:
+      - odc-reports/dependency-check-report.html
+      - odc-reports/dependency-check-report.xml
+  rules:
+    - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
+      when: never
+
+    - if: '$CI_PIPELINE_SOURCE == "parent_pipeline"'
+
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
+    - when: never
+
+unit_tests:
+  stage: test
+  image: node:14-alpine
+  before_script:
+    - *env_logic
+  script: 
+    - cd src/raints
+    - npm install
+    - npm run test
+  rules:
+    - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
+      when: never
+
+    - if: '$CI_PIPELINE_SOURCE == "parent_pipeline"'
+
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
+    - when: never
+
+build_push:
+  stage: build
+  image: docker:24.0.5
+  services:
+    - docker:24.0.5-dind
+  before_script:
+    - *env_logic
+    - while ! docker info > /dev/null 2>&1; do sleep 1; done
+  script:
+    - echo "$REGISTRY_PASSWORD" | docker login $REGISTRY_URL -u "$REGISTRY_USER" --password-stdin
+    - docker build -t ${FULL_IMAGE}:${GIT_TAG} ./src/ratings
+    - |
+      for i in 1 2 3; do
+        docker push ${FULL_IMAGE}:${GIT_TAG} && break || sleep 15
+      done
+    - docker logout ${REGISTRY_URL}
+  rules:
+    - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
+      when: never
+
+    - if: '$CI_PIPELINE_SOURCE == "parent_pipeline"'
+
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
+    - when: never
+
+scan_image_trivy:
+  stage: build
+  needs: ["build_push"]
+  image:
+    name: aquasec/trivy:latest
+    entrypoint: [""] 
+  services:
+    - docker:24.0.5-dind
+  before_script:
+    - *env_logic
+  script:
+    - trivy image --severity HIGH,CRITICAL --format template --template '@/contrib/html.tpl' -o trivy-results.html ${FULL_IMAGE}:${GIT_TAG}
+  artifacts:
+    paths:
+      - trivy-results.html
+  rules:
+    - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
+      when: never
+
+    - if: '$CI_PIPELINE_SOURCE == "parent_pipeline"'
+
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
+    - when: never
+
+deploy_k8s:
+  stage: deploy
+  image: 
+    name: alpine/helm:3.14.0
+    entrypoint: [""] 
+  before_script:
+    - *env_logic
+    - unset KUBECONFIG # Forces it to use the Service Account (gitlab-deployer)
+  variables:
+    KUBERNETES_NAMESPACE_OVERWRITE: "devops-tools"
+    KUBERNETES_SERVICE_ACCOUNT_OVERWRITE: "gitlab-deployer"
+  script:
+    - echo "Deploying Release ${RELEASE_NAME} to Namespace ${NAMESPACE}"
+    - helm upgrade --install ${RELEASE_NAME} ${CHART_DIR} --namespace ${NAMESPACE} -f ${VALUES_FILE} --set ratings.image.tag=${GIT_TAG} --wait
+  rules:
+    - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
+      when: never
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - when: never
+
+dast_zap:
+  stage: deploy
+  needs: ["deploy_k8s"]
+  image: 
+    name: ghcr.io/zaproxy/zaproxy:stable
+    entrypoint: [""]
+  before_script:
+    - *env_logic
+  script:
+    - mkdir -p /zap/wrk
+    - cp -r . /zap/wrk/
+    - cd /zap/wrk
+    - zap-baseline.py -t ${APP_URL} -r zap-report.html --autooff -I -z "-config connection.timeoutInSecs=60"
+    - cp zap-report.html ${CI_PROJECT_DIR} || true
+    - |
+      if [ ! -f zap-report.html ]; then 
+        echo "Report not found, checking DNS..."
+        nslookup $(echo "${APP_URL}" | sed -E 's|https?://||' | cut -d: -f1)
+      fi
+  artifacts:
+    when: always
+    paths:
+      - zap-report.html
+  rules:
+    - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
+      when: never
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "dev"'
+    - when: never
+
+release_prod_image:
+  stage: tagging
+  image: docker:24.0.5
+  services:
+    - docker:24.0.5-dind
+  before_script:
+    - *env_logic
+    - while ! docker info > /dev/null 2>&1; do sleep 1; done
+    - apk add --no-cache curl
+  script:
+    - echo "Preparing release version $RELEASE_VERSION"
+    - echo "$REGISTRY_PASSWORD" | docker login $REGISTRY_URL -u "$REGISTRY_USER" --password-stdin
+    - docker pull ${FULL_IMAGE}:${GIT_TAG}
+    - docker tag ${FULL_IMAGE}:${GIT_TAG} ${FULL_IMAGE}:${RELEASE_VERSION}
+    - docker push ${FULL_IMAGE}:${RELEASE_VERSION}
+    - docker logout
+    - |
+      curl --request POST \
+      --header "PRIVATE-TOKEN: ${PROJECT_ACCESS_TOKEN}" \
+      --url "https://${CI_SERVER_HOST}/api/v4/projects/${CI_PROJECT_ID}/repository/tags" \
+      --data "tag_name=ratings/${RELEASE_VERSION}" \
+      --data "ref=${CI_COMMIT_SHA}" \
+      --data "message=Release ratings/${RELEASE_VERSION}"
+  rules:
+    - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
+
+deploy_to_prod:
+  stage: release
+  image: 
+    name: alpine/helm:3.14.0
+    entrypoint: [""] 
+  before_script:
+    - unset KUBECONFIG # Forces it to use the Service Account (gitlab-deployer)
+  variables:
+    KUBERNETES_NAMESPACE_OVERWRITE: "devops-tools"
+    KUBERNETES_SERVICE_ACCOUNT_OVERWRITE: "gitlab-deployer"
+  script:
+    - echo "Deploying Release bookinfo-ratings-prod to Namespace Prod"
+    - helm upgrade --install bookinfo-ratings ${CHART_DIR} --namespace bookinfo-prod -f helm-chart/ratings/prod-ratings-values.yaml --set ratings.image.tag=${RELEASE_VERSION} --wait
+  rules:
+    - if: '$RELEASE_VERSION != "" && $RELEASE_VERSION != null'
+      when: manual
