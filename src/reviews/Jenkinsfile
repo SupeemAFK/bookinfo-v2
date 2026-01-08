@@ -245,22 +245,28 @@ spec:
                 container('zap') {
                     script {
                         sh '''
-                            echo "Waiting for Reviews service to be ready..."
+                        set +e 
+                        
+                        echo "Waiting for Reviews service to be ready..."
 
-                            for i in {1..30}; do
-                                STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://bookinfo-reviews-dev.bookinfo-dev.svc.cluster.local:9080/reviews)
-                                
-                                if [ "$STATUS" -eq "200" ]; then
-                                echo "Service is UP (HTTP 200). Starting ZAP scan..."
-                                exit 0
-                                fi
-                                
-                                echo "Service returned HTTP $STATUS. Retrying in 5s..."
-                                sleep 5
-                            done
+                        for i in {1..30}; do
+                            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://bookinfo-reviews-dev.bookinfo-dev.svc.cluster.local:9080/reviews || echo "000")
+                            
+                            if [ "$STATUS" -eq "200" ]; then
+                                echo "SUCCESS: Service is UP (HTTP 200). Starting ZAP..."
+                                break
+                            fi
+                            
+                            echo "Attempt $i: Service returned HTTP $STATUS. Retrying in 5s..."
+                            sleep 5
+                        done
 
-                            echo "Service failed to become ready in time."
+                        set -e 
+
+                        if [ "$STATUS" -ne "200" ]; then
+                            echo "ERROR: Service failed to become ready in time."
                             exit 1
+                        fi
                         '''
 
                         sh "chmod 777 ."
