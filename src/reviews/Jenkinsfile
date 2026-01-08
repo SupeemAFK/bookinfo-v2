@@ -81,7 +81,7 @@ spec:
         SONAR_SERVER_URL = "https://sast-supeem.opsta.in.th"
         SONAR_PROJECT_KEY = "${env.SAFE_BRANCH == 'main' ?  'bookinfo-reviews' : 'bookinfo-reviews-dev'}"
 
-        APP_URL      = "http://${RELEASE_NAME}.${NAMESPACE}.svc.cluster.local:9080"
+        APP_URL      = "http://bookinfo-productpage-${SAFE_BRANCH == 'main' ? 'uat' : 'dev'}.${NAMESPACE}.svc.cluster.local:9080/api/v1/products/0/ratings"
     }
 
     stages {
@@ -154,6 +154,7 @@ spec:
                         --scan ./src/reviews/build.gradle \
                         --format HTML \
                         --format XML \
+                        --enableExperimental \
                         --out .
                     '''
                 }
