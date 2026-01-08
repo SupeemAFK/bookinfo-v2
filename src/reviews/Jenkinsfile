@@ -244,6 +244,25 @@ spec:
             steps {
                 container('zap') {
                     script {
+                        sh '''
+                            echo "Waiting for Reviews service to be ready..."
+
+                            for i in {1..30}; do
+                                STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://bookinfo-reviews-dev.bookinfo-dev.svc.cluster.local:9080/reviews)
+                                
+                                if [ "$STATUS" -eq "200" ]; then
+                                echo "Service is UP (HTTP 200). Starting ZAP scan..."
+                                exit 0
+                                fi
+                                
+                                echo "Service returned HTTP $STATUS. Retrying in 5s..."
+                                sleep 5
+                            done
+
+                            echo "Service failed to become ready in time."
+                            exit 1
+                        '''
+
                         sh "chmod 777 ."
                         sh "ln -s \$(pwd) /zap/wrk"
 
