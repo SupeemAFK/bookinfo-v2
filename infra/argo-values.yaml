@@ -1,0 +1,29 @@
+global:
+  domain: argocd-supeem.opsta.in.th
+
+configs:
+  params:
+    server.insecure: true
+
+server:
+  replicas: 1
+  
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    
+    hostname: argocd-supeem.opsta.in.th
+    
+    path: /
+    pathType: Prefix
+    
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+
+    extraTls:
+      - hosts:
+          - argocd-supeem.opsta.in.th
+        secretName: argocd-cert
