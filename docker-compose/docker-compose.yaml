@@ -51,7 +51,7 @@ services:
       - db
 
   db:
-    image: bitnami/mongodb:latest
+    image: soldevelo/mongodb:latest
     container_name: mongodb
     restart: always
     ports:
